@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Institutional Retirement Matrix Engine v2</title>
+    <title>Retirement Engine v4 - Advanced AGI Ledger</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2026.3.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 1500px; margin: 0 auto; background: #fff; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; }
+        .container { max-width: 1650px; margin: 0 auto; background: #fff; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; }
         h2, h3 { color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 30px; }
         h2 { margin-top:0; }
         .grid-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
@@ -23,28 +23,42 @@
         .btn-secondary { background: #475569; }
         .btn-secondary:hover { background: #334155; }
         #chart-wrapper { width: 100%; height: 400px; margin: 30px 0; }
+        .agi-highlight { background-color: #fef08a; font-weight: bold; color: #1e3a8a; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Retirement Engine v2 (Multi-Outlay & Effective Tax Model)</h2>
+    <h2>Retirement Engine v4 (Advanced Adjusted Gross Income [AGI] Ledger)</h2>
     
     <h3>Global Parameters & Policy Settings</h3>
     <div class="grid-inputs">
         <div class="input-group"><label>Current Age</label><input type="number" id="current_age" value="60"></div>
         <div class="input-group"><label>Retirement Age</label><input type="number" id="retirement_age" value="65"></div>
         <div class="input-group"><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.01" value="0.03"></div>
-        <div class="input-group"><label>Base Annual Spending</label><input type="number" id="annual_spending" value="80000"></div>
+        <div class="input-group"><label>Base Annual Spending Need</label><input type="number" id="annual_spending" value="80000"></div>
         <div class="input-group"><label>Filing Status</label><select id="filing_status"><option value="MFJ">Married Filing Jointly</option><option value="Single">Single</option></select></div>
     </div>
 
-    <h3>Strategic Roth Conversion Window</h3>
-    <div class="grid-inputs">
-        <div class="input-group"><label>Roth Conv. Start Age</label><input type="number" id="roth_start" value="60"></div>
-        <div class="input-group"><label>Roth Conv. End Age</label><input type="number" id="roth_end" value="72"></div>
-        <div class="input-group"><label>Annual Conv. Target Amount</label><input type="number" id="roth_amount" value="50000"></div>
-    </div>
+    <h3>Targeted Roth Conversion Schedule Template</h3>
+    <table id="conversions-table">
+        <thead>
+            <tr><th>Target Execution Age</th><th>Conversion Amount ($ Value)</th><th>Action</th></tr>
+        </thead>
+        <tbody id="conversions-body">
+            <tr>
+                <td><input type="number" class="conv-age" value="61"></td>
+                <td><input type="number" class="conv-amount" value="50000"></td>
+                <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
+            </tr>
+            <tr>
+                <td><input type="number" class="conv-age" value="62"></td>
+                <td><input type="number" class="conv-amount" value="50000"></td>
+                <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
+            </tr>
+        </tbody>
+    </table>
+    <button class="btn btn-secondary" style="margin-top:10px;" onclick="addConversionRow()">+ Add Targeted Roth Conversion Event</button>
 
     <h3>Custom Capital Outlays Template Matrix</h3>
     <table id="outlays-table">
@@ -54,54 +68,59 @@
         <tbody id="outlays-body">
             <tr>
                 <td><input type="text" class="outlay-name" value="Purchase RV/Boat"></td>
-                <td><input type="number" class="outlay-age" value="66"></td>
-                <td><input type="number" class="outlay-amount" value="75000"></td>
-                <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
-            </tr>
-            <tr>
-                <td><input type="text" class="outlay-name" value="Home Renovation"></td>
-                <td><input type="number" class="outlay-age" value="72"></td>
-                <td><input type="number" class="outlay-amount" value="45000"></td>
+                <td><input type="number" class="outlay-age" value="67"></td>
+                <td><input type="number" class="outlay-amount" value="70000"></td>
                 <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
             </tr>
         </tbody>
     </table>
     <button class="btn btn-secondary" style="margin-top:10px;" onclick="addOutlayRow()">+ Add Additional Custom Outlay</button>
 
-    <h3>Asset Portfolios</h3>
+    <h3>Asset Portfolios & Wrappers</h3>
     <table id="accounts-table">
         <thead>
-            <tr><th>Account Identifier</th><th>Tax Wrapper Category</th><th>Value Balance</th><th>Cost Basis ($)</th><th>Total Internal Return</th></tr>
+            <tr><th>Account Identifier</th><th>Tax Wrapper Category</th><th>Value Balance</th><th>Cost Basis ($)</th><th>Total Internal Return (Rate)</th><th>Action</th></tr>
         </thead>
-        <tbody>
+        <tbody id="accounts-body">
             <tr>
                 <td><input type="text" class="acc-name" value="Traditional IRA Portfolio"></td>
-                <td><select class="acc-type"><option value="Traditional" selected>Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option></select></td>
+                <td><select class="acc-type"><option value="Traditional" selected>Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash">Cash/HYSA (Taxable)</option></select></td>
                 <td><input type="number" class="acc-balance" value="1200000"></td>
                 <td><input type="number" class="acc-basis" value="0"></td>
                 <td><input type="number" class="acc-return" step="0.01" value="0.07"></td>
+                <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
             </tr>
             <tr>
                 <td><input type="text" class="acc-name" value="Taxable Brokerage Account"></td>
-                <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option></select></td>
+                <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash/HYSA (Taxable)</option></select></td>
                 <td><input type="number" class="acc-balance" value="400000"></td>
                 <td><input type="number" class="acc-basis" value="250000"></td>
                 <td><input type="number" class="acc-return" step="0.01" value="0.06"></td>
+                <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
+            </tr>
+            <tr>
+                <td><input type="text" class="acc-name" value="Emergency Cash Core HYSA"></td>
+                <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash" selected>Cash/HYSA (Taxable)</option></select></td>
+                <td><input type="number" class="acc-balance" value="100000"></td>
+                <td><input type="number" class="acc-basis" value="100000"></td>
+                <td><input type="number" class="acc-return" step="0.01" value="0.04"></td>
+                <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
             </tr>
         </tbody>
     </table>
+    <button class="btn btn-secondary" style="margin-top:10px;" onclick="addAccountRow()">+ Add New Portfolio Account Asset Wrapper</button>
     
-    <div style="margin-top:20px;">
+    <div style="margin-top:30px;">
         <button class="btn" onclick="triggerPythonEngine()">Execute Matrix Simulation Model</button>
     </div>
 
     <div id="chart-wrapper"><canvas id="canvasChart"></canvas></div>
 
-    <h3>Granular Simulation & Effective Tax Log</h3>
+    <h3>Granular Simulation & AGI Tax Audit Log</h3>
     <table>
         <thead>
             <tr>
-                <th>Year</th><th>Age</th><th>Net Outflow Target</th><th>Roth Conv</th><th>Ord Income</th><th>Cap Gains Realized</th><th>Tax Bill Paid</th><th>Effective Tax Rate</th><th>Ending Net Worth</th>
+                <th>Year</th><th>Age</th><th>Target Demand</th><th>Ordinary Income</th><th>Realized Cap Gains</th><th>Tax-Free Roth Used</th><th class="agi-highlight">Calculated AGI</th><th>Total Tax Paid</th><th>Ending Net Worth</th>
             </tr>
         </thead>
         <tbody id="results-body">
@@ -150,11 +169,16 @@ def run_simulation_isolated():
         spending_base = safe_float('annual_spending', 80000)
         filing_status = document.getElementById('filing_status').value
         
-        roth_start = safe_int('roth_start', 60)
-        roth_end = safe_int('roth_end', 72)
-        roth_amount = safe_float('roth_amount', 50000)
+        # Parse Targeted Conversions
+        conv_ages = document.querySelectorAll('.conv-age')
+        conv_amounts = document.querySelectorAll('.conv-amount')
+        scheduled_conversions = {}
+        for idx in range(len(conv_ages)):
+            age = int(conv_ages[idx].value or 0)
+            amt = float(conv_amounts[idx].value or 0)
+            scheduled_conversions[age] = scheduled_conversions.get(age, 0.0) + amt
 
-        # Parse Template Outlays Array
+        # Parse Custom Outlays
         outlay_ages = document.querySelectorAll('.outlay-age')
         outlay_amounts = document.querySelectorAll('.outlay-amount')
         custom_outlays = {}
@@ -187,26 +211,26 @@ def run_simulation_isolated():
         for yr in range(1, 41):
             age = cur_age + yr - 1
             
-            # Compounding baseline requirements
             base_need = spending_base * ((1 + inflation) ** (yr - 1)) if age >= ret_age else 0
-            raw_shock = custom_outlays.get(age, 0.0)
-            shock_need = raw_shock * ((1 + inflation) ** (yr - 1))
-            total_cash_needed = base_need + shock_need
+            shock_need = custom_outlays.get(age, 0.0) * ((1 + inflation) ** (yr - 1))
+            target_cash_demand = base_need + shock_need
 
-            # Calculations for Mandatory RMD Tracker
             trad_total = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
             rmd_divisor = (27.4 - (age - 73)) if age >= 73 else 0
             rmd_requirement = (trad_total / rmd_divisor) if rmd_divisor > 0 else 0
 
+            # Base structural flows for AGI auditing
             ordinary_income_flow = rmd_requirement
-            capital_gains_flow = 0
+            capital_gains_realized = 0
+            roth_withdrawn_tax_free = 0
             
-            # Roth Conversion Mechanism
-            active_conversion = 0
-            if roth_start <= age <= roth_end and trad_total > 0:
-                active_conversion = min(roth_amount, trad_total)
-                ordinary_income_flow += active_conversion
-                rem_conv = active_conversion
+            # Process conversion event impact on ordinary income stack
+            target_conversion = scheduled_conversions.get(age, 0.0)
+            if target_conversion > 0 and trad_total > 0:
+                actual_conv = min(target_conversion, trad_total)
+                ordinary_income_flow += actual_conv
+                
+                rem_conv = actual_conv
                 for acc in accounts:
                     if acc['type'] == 'Traditional' and acc['balance'] > 0:
                         transfer = min(rem_conv, acc['balance'])
@@ -214,10 +238,10 @@ def run_simulation_isolated():
                         rem_conv -= transfer
                 for acc in accounts:
                     if acc['type'] == 'Roth':
-                        acc['balance'] += active_conversion
+                        acc['balance'] += actual_conv
                         break
 
-            # Process mandatory RMD outflows
+            # Deduct RMDs
             rem_rmd = rmd_requirement
             for acc in accounts:
                 if acc['type'] == 'Traditional' and acc['balance'] > 0:
@@ -225,46 +249,37 @@ def run_simulation_isolated():
                     acc['balance'] -= withdrawn
                     rem_rmd -= withdrawn
 
-            remaining_need = max(0, total_cash_needed - rmd_requirement)
+            remaining_need = max(0, target_cash_demand - rmd_requirement)
             
-            # Depletion Priority 1: Brokerage Capital Gains Realization Tracking
-            if remaining_need > 0:
+            # Tax-Efficient Drawdown Strategy: Cash -> Brokerage -> Traditional -> Roth
+            liquidation_sequence = ['Cash', 'Brokerage', 'Traditional', 'Roth']
+            for current_type in liquidation_sequence:
+                if remaining_need <= 0: break
                 for acc in accounts:
-                    if acc['type'] == 'Brokerage' and acc['balance'] > 0:
+                    if acc['type'] == current_type and acc['balance'] > 0:
                         pull = min(remaining_need, acc['balance'])
-                        gain_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
-                        capital_gains_flow += pull * gain_ratio
-                        acc['balance'] -= pull
-                        acc['basis'] -= (pull * (1.0 - gain_ratio))
-                        remaining_need -= pull
-
-            # Depletion Priority 2: Traditional
-            if remaining_need > 0:
-                for acc in accounts:
-                    if acc['type'] == 'Traditional' and acc['balance'] > 0:
-                        pull = min(remaining_need, acc['balance'])
-                        ordinary_income_flow += pull
-                        acc['balance'] -= pull
-                        remaining_need -= pull
-
-            # Depletion Priority 3: Tax-Free Roth
-            if remaining_need > 0:
-                for acc in accounts:
-                    if acc['type'] == 'Roth' and acc['balance'] > 0:
-                        pull = min(remaining_need, acc['balance'])
+                        
+                        if current_type == 'Brokerage':
+                            gain_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
+                            capital_gains_realized += pull * gain_ratio
+                            acc['basis'] -= (pull * (1.0 - gain_ratio))
+                        elif current_type == 'Traditional':
+                            ordinary_income_flow += pull
+                        elif current_type == 'Roth':
+                            roth_withdrawn_tax_free += pull
+                            
                         acc['balance'] -= pull
                         remaining_need -= pull
 
-            # Advanced Tax Multi-Tier Calculation
+            # COMPUTE AGI: Ordinary Taxable Flow + Realized Capital Gains (Roth is $0)
+            calculated_agi = ordinary_income_flow + capital_gains_realized
+
+            # Tax Application Layer
             ordinary_tax = calculate_progressive_tax(ordinary_income_flow, filing_status)
-            capital_gains_tax = capital_gains_flow * 0.15
+            capital_gains_tax = capital_gains_realized * 0.15
             total_tax_bill = ordinary_tax + capital_gains_tax
-            
-            # Effective Tax Rate calculation based on true taxable asset flow
-            total_gross_flow = ordinary_income_flow + capital_gains_flow
-            effective_tax_rate = (total_tax_bill / total_gross_flow * 100) if total_gross_flow > 0 else 0.0
 
-            # Pull money out to cover the tax bill
+            # Pay the tax bill out of liquid assets
             rem_tax = total_tax_bill
             for acc in accounts:
                 if rem_tax <= 0: break
@@ -273,12 +288,12 @@ def run_simulation_isolated():
                     acc['balance'] -= pull
                     rem_tax -= pull
 
-            # Market Returns Growth Processing
+            # Compound Account Assets
             for acc in accounts:
                 if acc['balance'] > 0:
                     growth = acc['balance'] * acc['rate']
                     acc['balance'] += growth
-                    if acc['type'] == 'Brokerage':
+                    if acc['type'] in ['Brokerage', 'Cash']:
                         acc['basis'] += growth * 0.4
 
             ending_net_worth = sum(a['balance'] for a in accounts)
@@ -287,14 +302,13 @@ def run_simulation_isolated():
 
             outputs.append(f"""
                 <tr>
-                    <td>{yr}</td>
-                    <td>{age}</td>
-                    <td>${total_cash_needed:,.0f}</td>
-                    <td>${active_conversion:,.0f}</td>
+                    <td>{yr}</td><td>{age}</td>
+                    <td>${target_cash_demand:,.0f}</td>
                     <td>${ordinary_income_flow:,.0f}</td>
-                    <td>${capital_gains_flow:,.0f}</td>
+                    <td>${capital_gains_realized:,.0f}</td>
+                    <td style='color:#16a34a;'>${roth_withdrawn_tax_free:,.0f}</td>
+                    <td class='agi-highlight'>${calculated_agi:,.0f}</td>
                     <td style='color:#dc2626;'>${total_tax_bill:,.0f}</td>
-                    <td style='font-weight:600; color:#2563eb;'>{effective_tax_rate:.1f}%</td>
                     <td style='font-weight:bold;'>${ending_net_worth:,.0f}</td>
                 </tr>
             """)
@@ -308,6 +322,17 @@ window.run_simulation_isolated = run_simulation_isolated
 </script>
 
 <script>
+function addConversionRow() {
+    const tbody = document.getElementById('conversions-body');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input type="number" class="conv-age" value="65"></td>
+        <td><input type="number" class="conv-amount" value="50000"></td>
+        <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
+    `;
+    tbody.appendChild(tr);
+}
+
 function addOutlayRow() {
     const tbody = document.getElementById('outlays-body');
     const tr = document.createElement('tr');
@@ -320,11 +345,25 @@ function addOutlayRow() {
     tbody.appendChild(tr);
 }
 
+function addAccountRow() {
+    const tbody = document.getElementById('accounts-body');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input type="text" class="acc-name" value="Supplemental Account"></td>
+        <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash" selected>Cash/HYSA (Taxable)</option></select></td>
+        <td><input type="number" class="acc-balance" value="50000"></td>
+        <td><input type="number" class="acc-basis" value="50000"></td>
+        <td><input type="number" class="acc-return" step="0.01" value="0.04"></td>
+        <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
+    `;
+    tbody.appendChild(tr);
+}
+
 function triggerPythonEngine() {
     if (typeof window.run_simulation_isolated === 'function') {
         window.run_simulation_isolated();
     } else {
-        alert("The WebAssembly core engine is still configuring itself. Give it 5 more seconds!");
+        alert("The WebAssembly framework is initializing its virtual vectors. Click again in 5 seconds!");
     }
 }
 
