@@ -2,383 +2,272 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Autonomous Retirement Planning Engine</title>
+    <title>Institutional Retirement Matrix Engine</title>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2026.3.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 1300px; margin: 0 auto; background: #fff; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: #fff; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; }
         h2, h3 { color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 30px; }
-        h2 { margin-top: 0; }
+        h2 { margin-top:0; }
         .grid-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .input-group { display: flex; flex-direction: column; }
         .input-group label { font-size: 0.85rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
         .input-group input, .input-group select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
-        th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
+        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
         th { background-color: #e2e8f0; color: #1e3a8a; }
-        .btn { background: #2563eb; color: white; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.2s; margin-right: 5px; }
+        .btn { background: #2563eb; color: white; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 4px; }
         .btn:hover { background: #1d4ed8; }
-        .btn-secondary { background: #64748b; }
-        .btn-secondary:hover { background: #475569; }
-        .btn-danger { background: #dc2626; padding: 5px 10px; font-size: 0.8rem; margin: 0; }
-        .btn-danger:hover { background: #b91c1c; }
-        .toolbar { background: #f1f5f9; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-        .summary-box { background: #eff6ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .summary-stat { font-size: 1.1rem; font-weight: bold; }
-        .summary-stat span { display: block; font-size: 0.8rem; color: #64748b; text-transform: uppercase; }
         #chart-wrapper { width: 100%; height: 400px; margin: 30px 0; }
-        .hidden-row { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Retirement Engine (Data-Persistent Mode)</h2>
+    <h2>Retirement Engine (Python WebAssembly Mode)</h2>
     
-    <div class="toolbar">
-        <button class="btn" style="background: #059669;" onclick="exportToFile()">💾 Save Profile to File</button>
-        <button class="btn btn-secondary" onclick="document.getElementById('fileImporter').click()">📂 Load Profile from File</button>
-        <input type="file" id="fileImporter" style="display:none;" accept=".json" onchange="importFromFile(event)">
-        <span style="font-size: 0.85rem; color: #64748b;">File storage mimics saving an Excel sheet to your hard drive.</span>
-    </div>
-    
-    <h3>Global Assumptions</h3>
+    <h3>Global Parameters & Policy Settings</h3>
     <div class="grid-inputs">
-        <div class="input-group"><label>Current Age</label><input type="number" id="current_age" value="60" oninput="autoRecalculate()"></div>
-        <div class="input-group"><label>Retirement Age</label><input type="number" id="retirement_age" value="65" oninput="autoRecalculate()"></div>
-        <div class="input-group"><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.01" value="0.03" oninput="autoRecalculate()"></div>
-        <div class="input-group"><label>Annual Spending (Today's $)</label><input type="number" id="annual_spending" value="80000" oninput="autoRecalculate()"></div>
-        <div class="input-group"><label>Ordinary Tax Rate</label><input type="number" id="ordinary_tax_rate" step="0.01" value="0.22" oninput="autoRecalculate()"></div>
-        <div class="input-group"><label>LTCG Tax Rate</label><input type="number" id="ltcg_tax_rate" step="0.01" value="0.15" oninput="autoRecalculate()"></div>
-        <div class="input-group">
-            <label>NUA Enabled</label>
-            <select id="nua_enabled" onchange="autoRecalculate()">
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-            </select>
-        </div>
+        <div class="input-group"><label>Current Age</label><input type="number" id="current_age" value="60"></div>
+        <div class="input-group"><label>Retirement Age</label><input type="number" id="retirement_age" value="65"></div>
+        <div class="input-group"><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.01" value="0.03"></div>
+        <div class="input-group"><label>Base Annual Spending</label><input type="number" id="annual_spending" value="80000"></div>
+        <div class="input-group"><label>Filing Status</label><select id="filing_status"><option value="MFJ">Married Filing Jointly</option><option value="Single">Single</option></select></div>
     </div>
 
-    <h3>Asset Account Profiles</h3>
+    <h3>Strategic Scenarios (Roth Conversions & Capital Shock Outlays)</h3>
+    <div class="grid-inputs">
+        <div class="input-group"><label>Roth Conv. Start Age</label><input type="number" id="roth_start" value="60"></div>
+        <div class="input-group"><label>Roth Conv. End Age</label><input type="number" id="roth_end" value="72"></div>
+        <div class="input-group"><label>Annual Conv. Target Amount</label><input type="number" id="roth_amount" value="50000"></div>
+        <div class="input-group"><label>Large Capital Event Age</label><input type="number" id="shock_age" value="68"></div>
+        <div class="input-group"><label>Large Capital Outlay ($ amount)</label><input type="number" id="shock_amount" value="60000"></div>
+    </div>
+
+    <h3>Asset Portfolios</h3>
     <table id="accounts-table">
         <thead>
-            <tr>
-                <th>Account Name</th>
-                <th>Type</th>
-                <th>Starting Balance</th>
-                <th>Cost Basis</th>
-                <th>Exp. Return (Mean)</th>
-                <th>Div Yield</th>
-                <th>NUA Eligible</th>
-                <th>Action</th>
-            </tr>
+            <tr><th>Account Identifier</th><th>Tax Wrapper Category</th><th>Value Balance</th><th>Cost Basis ($)</th><th>Total Internal Return</th></tr>
         </thead>
-        <tbody id="accounts-body">
-            </tbody>
+        <tbody>
+            <tr>
+                <td><input type="text" class="acc-name" value="Traditional IRA Portfolio"></td>
+                <td><select class="acc-type"><option value="Traditional" selected>Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option></select></td>
+                <td><input type="number" class="acc-balance" value="1200000"></td>
+                <td><input type="number" class="acc-basis" value="0"></td>
+                <td><input type="number" class="acc-return" step="0.01" value="0.07"></td>
+            </tr>
+            <tr>
+                <td><input type="text" class="acc-name" value="Taxable Brokerage Account"></td>
+                <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option></select></td>
+                <td><input type="number" class="acc-balance" value="400000"></td>
+                <td><input type="number" class="acc-basis" value="250000"></td>
+                <td><input type="number" class="acc-return" step="0.01" value="0.06"></td>
+            </tr>
+        </tbody>
     </table>
-    <button class="btn btn-secondary" style="margin-top:10px;" onclick="addAccountRow()">+ Add Asset Account</button>
-
-    <h3>Summary Metrics</h3>
-    <div class="summary-box">
-        <div class="summary-stat"><span>Total W/D Year 1</span><div id="stat-wd">$0.00</div></div>
-        <div class="summary-stat"><span>Surplus / Shortfall</span><div id="stat-surplus">$0.00</div></div>
-        <div class="summary-stat"><span>Net Worth Today</span><div id="stat-nw-start">$0.00</div></div>
-        <div class="summary-stat"><span>Net Worth at Age 80</span><div id="stat-nw-80">$0.00</div></div>
+    
+    <div style="margin-top:20px;">
+        <button class="btn" id="run-btn">Execute Matrix Simulation Model</button>
     </div>
 
-    <div id="chart-wrapper">
-        <canvas id="canvasChart"></canvas>
-    </div>
+    <div id="chart-wrapper"><canvas id="canvasChart"></canvas></div>
 
-    <div style="display: flex; align-items: center; justify-content: space-between;">
-        <h3>Detailed Projections Table</h3>
-        <div>
-            <label style="font-weight: bold; font-size:0.9rem;">Show Details Rows?</label>
-            <select id="detailsToggle" onchange="toggleTableDetails()">
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-            </select>
-        </div>
-    </div>
-
-    <table id="results-table">
+    <h3>Granular Simulation Log</h3>
+    <table>
         <thead>
             <tr>
-                <th>Year</th><th>Age</th><th>Spending Need</th><th>RMD Obligation</th>
-                <th>Savings W/D</th><th>Brokerage W/D</th><th>IRA W/D</th><th>Roth W/D</th>
-                <th>Tax Obligation</th><th>Net Worth Balance</th>
+                <th>Year</th><th>Age</th><th>Base Outflow</th><th>Shock Outlays</th><th>Roth Conv</th><th>RMD Oblig.</th><th>Tax Bill</th><th>Ending Net Worth</th>
             </tr>
         </thead>
-        <tbody id="results-body"></tbody>
+        <tbody id="results-body">
+            <tr><td colspan="8" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
+        </tbody>
     </table>
 </div>
 
+<script type="py">
+import json
+from pyscript import document, window
+
+TAX_BRACKETS = {
+    'Single': [(11600, 0.10), (47150, 0.12), (100525, 0.22), (191950, 0.24), (243725, 0.32), (609350, 0.35), (float('inf'), 0.37)],
+    'MFJ': [(23200, 0.10), (94300, 0.12), (201050, 0.22), (383900, 0.24), (487450, 0.32), (731200, 0.35), (float('inf'), 0.37)]
+}
+STANDARD_DEDUCTION = {'Single': 15000, 'MFJ': 30000}
+
+def safe_float(element_id, default=0.0):
+    val = document.getElementById(element_id).value.strip()
+    return float(val) if val else default
+
+def safe_int(element_id, default=0):
+    val = document.getElementById(element_id).value.strip()
+    return int(val) if val else default
+
+def calculate_progressive_tax(income, status):
+    taxable_income = max(0, income - STANDARD_DEDUCTION[status])
+    if taxable_income <= 0: return 0
+    tax = 0
+    previous_limit = 0
+    for limit, rate in TAX_BRACKETS[status]:
+        if taxable_income > limit:
+            tax += (limit - previous_limit) * rate
+            previous_limit = limit
+        else:
+            tax += (taxable_income - previous_limit) * rate
+            break
+    return tax
+
+def run_simulation(event):
+    try:
+        cur_age = safe_int('current_age', 60)
+        ret_age = safe_int('retirement_age', 65)
+        inflation = safe_float('inflation_rate', 0.03)
+        spending_base = safe_float('annual_spending', 80000)
+        filing_status = document.getElementById('filing_status').value
+        
+        roth_start = safe_int('roth_start', 60)
+        roth_end = safe_int('roth_end', 72)
+        roth_amount = safe_float('roth_amount', 50000)
+        shock_age = safe_int('shock_age', 68)
+        shock_amount = safe_float('shock_amount', 60000)
+
+        names = document.querySelectorAll('.acc-name')
+        types = document.querySelectorAll('.acc-type')
+        balances = document.querySelectorAll('.acc-balance')
+        bases = document.querySelectorAll('.acc-basis')
+        returns = document.querySelectorAll('.acc-return')
+
+        accounts = []
+        for idx in range(len(names)):
+            accounts.append({
+                'name': names[idx].value,
+                'type': types[idx].value,
+                'balance': float(balances[idx].value or 0),
+                'basis': float(bases[idx].value or 0),
+                'rate': float(returns[idx].value or 0)
+            })
+
+        outputs = []
+        chart_labels = []
+        chart_data = []
+
+        for yr in range(1, 41):
+            age = cur_age + yr - 1
+            spending_need = spending_base * ((1 + inflation) ** (yr - 1)) if age >= ret_age else 0
+            capital_shock = shock_amount * ((1 + inflation) ** (yr - 1)) if age == shock_age else 0
+            total_cash_needed = spending_need + capital_shock
+
+            trad_total = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
+            rmd_divisor = (27.4 - (age - 73)) if age >= 73 else 0
+            rmd_requirement = (trad_total / rmd_divisor) if rmd_divisor > 0 else 0
+
+            ordinary_income_flow = rmd_requirement
+            capital_gains_flow = 0
+            
+            active_conversion = 0
+            if roth_start <= age <= roth_end and trad_total > 0:
+                active_conversion = min(roth_amount, trad_total)
+                ordinary_income_flow += active_conversion
+                rem_conv = active_conversion
+                for acc in accounts:
+                    if acc['type'] == 'Traditional' and acc['balance'] > 0:
+                        transfer = min(rem_conv, acc['balance'])
+                        acc['balance'] -= transfer
+                        rem_conv -= transfer
+                for acc in accounts:
+                    if acc['type'] == 'Roth':
+                        acc['balance'] += active_conversion
+                        break
+
+            rem_rmd = rmd_requirement
+            for acc in accounts:
+                if acc['type'] == 'Traditional' and acc['balance'] > 0:
+                    withdrawn = min(rem_rmd, acc['balance'])
+                    acc['balance'] -= withdrawn
+                    rem_rmd -= withdrawn
+
+            remaining_need = max(0, total_cash_needed - rmd_requirement)
+            
+            if remaining_need > 0:
+                for acc in accounts:
+                    if acc['type'] == 'Brokerage' and acc['balance'] > 0:
+                        pull = min(remaining_need, acc['balance'])
+                        gain_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
+                        capital_gains_flow += pull * gain_ratio
+                        acc['balance'] -= pull
+                        acc['basis'] -= (pull * (1.0 - gain_ratio))
+                        remaining_need -= pull
+
+            if remaining_need > 0:
+                for acc in accounts:
+                    if acc['type'] == 'Traditional' and acc['balance'] > 0:
+                        pull = min(remaining_need, acc['balance'])
+                        ordinary_income_flow += pull
+                        acc['balance'] -= pull
+                        remaining_need -= pull
+
+            if remaining_need > 0:
+                for acc in accounts:
+                    if acc['type'] == 'Roth' and acc['balance'] > 0:
+                        pull = min(remaining_need, acc['balance'])
+                        acc['balance'] -= pull
+                        remaining_need -= pull
+
+            tax_bill = calculate_progressive_tax(ordinary_income_flow, filing_status) + (capital_gains_flow * 0.15)
+            
+            rem_tax = tax_bill
+            for acc in accounts:
+                if rem_tax <= 0: break
+                if acc['balance'] > 0:
+                    pull = min(rem_tax, acc['balance'])
+                    acc['balance'] -= pull
+                    rem_tax -= pull
+
+            for acc in accounts:
+                if acc['balance'] > 0:
+                    growth = acc['balance'] * acc['rate']
+                    acc['balance'] += growth
+                    if acc['type'] == 'Brokerage':
+                        acc['basis'] += growth * 0.4
+
+            ending_net_worth = sum(a['balance'] for a in accounts)
+            chart_labels.append(f"Age {age}")
+            chart_data.append(ending_net_worth)
+
+            outputs.append(f"<tr><td>{yr}</td><td>{age}</td><td>${spending_need:,.0f}</td><td>${capital_shock:,.0f}</td><td>${active_conversion:,.0f}</td><td>${rmd_requirement:,.0f}</td><td style='color:#dc2626;'>${tax_bill:,.0f}</td><td style='font-weight:bold;'>${ending_net_worth:,.0f}</td></tr>")
+
+        document.getElementById('results-body').innerHTML = "".join(outputs)
+        window.renderChart(chart_labels, chart_data)
+    except Exception as e:
+        window.alert(f"Execution Error: {str(e)}")
+
+document.getElementById('run-btn').addEventListener('click', run_simulation)
+</script>
+
 <script>
 let chartInstance = null;
-
-function addAccountRow(data = {}) {
-    const tbody = document.getElementById('accounts-body');
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td><input type="text" class="acc-name" value="${data.name || 'New Account'}" oninput="autoRecalculate()"></td>
-        <td>
-            <select class="acc-type" onchange="autoRecalculate()">
-                <option value="Traditional" ${data.type === 'Traditional' ? 'selected' : ''}>Traditional</option>
-                <option value="Roth" ${data.type === 'Roth' ? 'selected' : ''}>Roth</option>
-                <option value="Brokerage" ${data.type === 'Brokerage' ? 'selected' : ''}>Brokerage</option>
-                <option value="Savings" ${data.type === 'Savings' ? 'selected' : ''}>Savings</option>
-            </select>
-        </td>
-        <td><input type="number" class="acc-balance" value="${data.balance ?? 100000}" oninput="autoRecalculate()"></td>
-        <td><input type="number" class="acc-basis" value="${data.basis ?? 0}" oninput="autoRecalculate()"></td>
-        <td><input type="number" class="acc-return" step="0.01" value="${data.return ?? 0.05}" oninput="autoRecalculate()"></td>
-        <td><input type="number" class="acc-div" step="0.01" value="${data.div ?? 0.00}" oninput="autoRecalculate()"></td>
-        <td>
-            <select class="acc-nua" onchange="autoRecalculate()">
-                <option value="No" ${data.nua === 'No' ? 'selected' : ''}>No</option>
-                <option value="Yes" ${data.nua === 'Yes' ? 'selected' : ''}>Yes</option>
-            </select>
-        </td>
-        <td><button class="btn btn-danger" onclick="deleteRow(this)">Delete</button></td>
-    `;
-    tbody.appendChild(row);
-    autoRecalculate();
-}
-
-function deleteRow(button) {
-    button.parentNode.parentNode.remove();
-    autoRecalculate();
-}
-
-function toggleTableDetails() {
-    const show = document.getElementById('detailsToggle').value === 'Yes';
-    document.querySelectorAll('#results-body tr').forEach(row => {
-        row.style.display = show ? 'table-row' : 'none';
-    });
-}
-
-function compileDataSnapshot() {
-    const snapshot = {
-        inputs: {
-            current_age: document.getElementById('current_age').value,
-            retirement_age: document.getElementById('retirement_age').value,
-            inflation_rate: document.getElementById('inflation_rate').value,
-            annual_spending: document.getElementById('annual_spending').value,
-            ordinary_tax_rate: document.getElementById('ordinary_tax_rate').value,
-            ltcg_tax_rate: document.getElementById('ltcg_tax_rate').value,
-            nua_enabled: document.getElementById('nua_enabled').value
-        },
-        accounts: []
-    };
-
-    const names = document.querySelectorAll('.acc-name');
-    const types = document.querySelectorAll('.acc-type');
-    const balances = document.querySelectorAll('.acc-balance');
-    const bases = document.querySelectorAll('.acc-basis');
-    const returns = document.querySelectorAll('.acc-return');
-    const divs = document.querySelectorAll('.acc-div');
-    const nuas = document.querySelectorAll('.acc-nua');
-
-    names.forEach((el, idx) => {
-        snapshot.accounts.push({
-            name: el.value,
-            type: types[idx].value,
-            balance: parseFloat(balances[idx].value) || 0,
-            basis: parseFloat(bases[idx].value) || 0,
-            return: parseFloat(returns[idx].value) || 0,
-            div: parseFloat(divs[idx].value) || 0,
-            nua: nuas[idx].value
-        });
-    });
-    return snapshot;
-}
-
-function exportToFile() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(compileDataSnapshot(), null, 4));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", "retirement_profile.json");
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-}
-
-function importFromFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const parsed = JSON.parse(e.target.result);
-            applySnapshotToUI(parsed);
-        } catch (err) {
-            alert("Error parsing file. Ensure it is a valid retirement backup profile.");
-        }
-    };
-    reader.readAsText(file);
-}
-
-function applySnapshotToUI(snapshot) {
-    if(!snapshot.inputs || !snapshot.accounts) return;
-    document.getElementById('current_age').value = snapshot.inputs.current_age;
-    document.getElementById('retirement_age').value = snapshot.inputs.retirement_age;
-    document.getElementById('inflation_rate').value = snapshot.inputs.inflation_rate;
-    document.getElementById('annual_spending').value = snapshot.inputs.annual_spending;
-    document.getElementById('ordinary_tax_rate').value = snapshot.inputs.ordinary_tax_rate;
-    document.getElementById('ltcg_tax_rate').value = snapshot.inputs.ltcg_tax_rate;
-    document.getElementById('nua_enabled').value = snapshot.inputs.nua_enabled;
-
-    document.getElementById('accounts-body').innerHTML = "";
-    snapshot.accounts.forEach(acc => addAccountRow(acc));
-}
-
-function autoRecalculate() {
-    const data = compileDataSnapshot();
-    
-    // Save state automatically to the browser history cache
-    localStorage.setItem('retirement_cache', JSON.stringify(data));
-
-    const curAge = parseInt(data.inputs.current_age) || 0;
-    const inflation = parseFloat(data.inputs.inflation_rate) || 0;
-    const spendingBase = parseFloat(data.inputs.annual_spending) || 0;
-    const ordTax = parseFloat(data.inputs.ordinary_tax_rate) || 0;
-    const ltcgTax = parseFloat(data.inputs.ltcg_tax_rate) || 0;
-
-    let initialNetWorth = data.accounts.reduce((sum, a) => sum + a.balance, 0);
-    let localAccounts = data.accounts.map(a => ({...a, rate: a.return + a.div}));
-    
-    let results = [];
-    let chartAges = [];
-    let chartNetWorths = [];
-    let nwAt80 = 0;
-
-    for(let yr = 1; yr <= 40; yr++) {
-        let age = curAge + (yr - 1);
-        let spendingNeed = spendingBase * Math.pow((1 + inflation), (yr - 1));
-        
-        let tradIRA = localAccounts.filter(a => a.type === "Traditional").reduce((sum, a) => sum + a.balance, 0);
-        let rmd = age >= 73 ? (tradIRA / (27.4 - (age - 73))) : 0;
-        if (rmd < 0 || isNaN(rmd)) rmd = 0;
-
-        let remNeed = spendingNeed;
-        let savingsWd = 0, brokerageWd = 0, iraWd = 0, rothWd = 0;
-
-        if(rmd > 0) {
-            let actualDistributedRmd = Math.min(rmd, tradIRA);
-            iraWd += actualDistributedRmd;
-            remNeed = Math.max(0, remNeed - actualDistributedRmd);
-            
-            let tempRmd = actualDistributedRmd;
-            for(let acc of localAccounts) {
-                if(acc.type === "Traditional" && acc.balance > 0) {
-                    let taken = Math.min(tempRmd, acc.balance);
-                    acc.balance -= taken;
-                    tempRmd -= taken;
-                }
-            }
-        }
-        
-        localAccounts.forEach(acc => {
-            if(remNeed <= 0 || acc.balance <= 0) return;
-            let pull = 0;
-            if(acc.type === "Savings") {
-                pull = Math.min(remNeed, acc.balance, 50000);
-                savingsWd += pull;
-            } else if(acc.type === "Brokerage") {
-                pull = Math.min(remNeed, acc.balance, 100000);
-                brokerageWd += pull;
-            } else if(acc.type === "Traditional") {
-                pull = Math.min(remNeed, acc.balance);
-                iraWd += pull;
-            } else if(acc.type === "Roth") {
-                pull = Math.min(remNeed, acc.balance);
-                rothWd += pull;
-            }
-            acc.balance -= pull;
-            remNeed -= pull;
-        });
-
-        let totalTax = (iraWd * ordTax) + (brokerageWd * 0.02 * ltcgTax);
-
-        localAccounts.forEach(acc => {
-            if(acc.balance > 0) acc.balance = acc.balance * (1 + acc.rate);
-        });
-
-        let currentNW = localAccounts.reduce((sum, a) => sum + a.balance, 0);
-        if(age === 80) nwAt80 = currentNW;
-
-        chartAges.push(`Age ${age}`);
-        chartNetWorths.push(currentNW);
-
-        results.push({
-            yr, age, spendingNeed, rmd, savingsWd, brokerageWd, iraWd, rothWd, totalTax, currentNW
-        });
-    }
-
-    // Connect dashboard summaries
-    const firstYear = results[0];
-    const totalWdYear1 = firstYear.savingsWd + firstYear.brokerageWd + firstYear.iraWd + firstYear.rothWd;
-    document.getElementById('stat-wd').innerText = `$${totalWdYear1.toLocaleString(undefined, {maximumFractionDigits:0})}`;
-    
-    const surplus = totalWdYear1 - firstYear.spendingNeed;
-    const surplusEl = document.getElementById('stat-surplus');
-    surplusEl.innerText = `$${surplus.toLocaleString(undefined, {maximumFractionDigits:0})}`;
-    surplusEl.style.color = surplus >= 0 ? "#059669" : "#dc2626";
-
-    document.getElementById('stat-nw-start').innerText = `$${initialNetWorth.toLocaleString()}`;
-    document.getElementById('stat-nw-80').innerText = `$${nwAt80.toLocaleString(undefined, {maximumFractionDigits:0})}`;
-
-    // Output Data Rows
-    const tbody = document.getElementById('results-body');
-    tbody.innerHTML = "";
-    const showDetails = document.getElementById('detailsToggle').value === 'Yes';
-    
-    results.forEach(r => {
-        const row = document.createElement('tr');
-        if(!showDetails) row.style.display = 'none';
-        row.innerHTML = `
-            <td>${r.yr}</td><td>${r.age}</td>
-            <td>$${r.spendingNeed.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-            <td>$${r.rmd.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-            <td>$${r.savingsWd.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-            <td>$${r.brokerageWd.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-            <td>$${r.iraWd.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-            <td>$${r.rothWd.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-            <td>$${r.totalTax.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-            <td style="font-weight:bold; color:${r.currentNW > 0 ? '#1e3a8a':'#dc2626'}">$${r.currentNW.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-        `;
-        tbody.appendChild(row);
-    });
-
+window.renderChart = function(labels, data) {
     if (chartInstance) chartInstance.destroy();
     const ctx = document.getElementById('canvasChart').getContext('2d');
     chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: chartAges,
+            labels: labels,
             datasets: [{
-                label: 'Simulated Net Worth Trajectory',
-                data: chartNetWorths,
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                label: 'Simulated Portfolio Assets Under Management (AUM)',
+                data: data,
+                borderColor: '#1e3a8a',
+                backgroundColor: 'rgba(30, 58, 138, 0.1)',
                 fill: true,
                 tension: 0.1
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false, animation: { duration: 150 } }
+        options: { responsive: true, maintainAspectRatio: false }
     });
 }
-
-// Initialization fallback logic sequence
-window.onload = function() {
-    const cached = localStorage.getItem('retirement_cache');
-    if(cached) {
-        applySnapshotToUI(JSON.parse(cached));
-    } else {
-        // Load clean initial state defaults
-        addAccountRow({name: 'Core 401k', type: 'Traditional', balance: 500000, basis: 0, return: 0.06, div: 0.01, nua: 'No'});
-    }
-};
 </script>
 </body>
 </html>
