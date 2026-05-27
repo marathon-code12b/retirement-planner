@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Autonomous Retirement Planning Engine</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1300px; margin: 0 auto; background: #fff; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; }
+        h2, h3 { color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 30px; }
+        h2 { margin-top: 0; }
+        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 0.85rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
+        .input-group input, .input-group select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
+        th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
+        th { background-color: #e2e8f0; color: #1e3a8a; }
+        .btn { background: #2563eb; color: white; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.2s; margin-right: 5px; }
+        .btn:hover { background: #1d4ed8; }
+        .btn-secondary { background: #64748b; }
+        .btn-secondary:hover { background: #475569; }
+        .btn-danger { background: #dc2626; padding: 5px 10px; font-size: 0.8rem; margin: 0; }
+        .btn-danger:hover { background: #b91c1c; }
+        .toolbar { background: #f1f5f9; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .summary-box { background: #eff6ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .summary-stat { font-size: 1.1rem; font-weight: bold; }
+        .summary-stat span { display: block; font-size: 0.8rem; color: #64748b; text-transform: uppercase; }
+        #chart-wrapper { width: 100%; height: 400px; margin: 30px 0; }
+        .hidden-row { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Retirement Engine (Data-Persistent Mode)</h2>
+    
+    <div class="toolbar">
+        <button class="btn" style="background: #059669;" onclick="exportToFile()">💾 Save Profile to File</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('fileImporter').click()">📂 Load Profile from File</button>
+        <input type="file" id="fileImporter" style="display:none;" accept=".json" onchange="importFromFile(event)">
+        <span style="font-size: 0.85rem; color: #64748b;">File storage mimics saving an Excel sheet to your hard drive.</span>
+    </div>
+    
+    <h3>Global Assumptions</h3>
+    <div class="grid-inputs">
+        <div class="input-group"><label>Current Age</label><input type="number" id="current_age" value="60" oninput="autoRecalculate()"></div>
+        <div class="input-group"><label>Retirement Age</label><input type="number" id="retirement_age" value="65" oninput="autoRecalculate()"></div>
+        <div class="input-group"><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.01" value="0.03" oninput="autoRecalculate()"></div>
+        <div class="input-group"><label>Annual Spending (Today's $)</label><input type="number" id="annual_spending" value="80000" oninput="autoRecalculate()"></div>
+        <div class="input-group"><label>Ordinary Tax Rate</label><input type="number" id="ordinary_tax_rate" step="0.01" value="0.22" oninput="autoRecalculate()"></div>
+        <div class="input-group"><label>LTCG Tax Rate</label><input type="number" id="ltcg_tax_rate" step="0.01" value="0.15" oninput="autoRecalculate()"></div>
+        <div class="input-group">
+            <label>NUA Enabled</label>
+            <select id="nua_enabled" onchange="autoRecalculate()">
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+            </select>
+        </div>
+    </div>
+
+    <h3>Asset Account Profiles</h3>
+    <table id="accounts-table">
+        <thead>
+            <tr>
+                <th>Account Name</th>
+                <th>Type</th>
+                <th>Starting Balance</th>
+                <th>Cost Basis</th>
+                <th>Exp. Return (Mean)</th>
+                <th>Div Yield</th>
+                <th>NUA Eligible</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="accounts-body">
+            </tbody>
+    </table>
+    <button class="btn btn-secondary" style="margin-top:10px;" onclick="addAccountRow()">+ Add Asset Account</button>
+
+    <h3>Summary Metrics</h3>
+    <div class="summary-box">
+        <div class="summary-stat"><span>Total W/D Year 1</span><div id="stat-wd">$0.00</div></div>
+        <div class="summary-stat"><span>Surplus / Shortfall</span><div id="stat-surplus">$0.00</div></div>
+        <div class="summary-stat"><span>Net Worth Today</span><div id="stat-nw-start">$0.00</div></div>
+        <div class="summary-stat"><span>Net Worth at Age 80</span><div id="stat-nw-80">$0.00</div></div>
+    </div>
+
+    <div id="chart-wrapper">
+        <canvas id="canvasChart"></canvas>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+        <h3>Detailed Projections Table</h3>
+        <div>
+            <label style="font-weight: bold; font-size:0.9rem;">Show Details Rows?</label>
+            <select id="detailsToggle" onchange="toggleTableDetails()">
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+            </select>
+        </div>
+    </div>
+
+    <table id="results-table">
+        <thead>
+            <tr>
+                <th>Year</th><th>Age</th><th>Spending Need</th><th>RMD Obligation</th>
+                <th>Savings W/D</th><th>Brokerage W/D</th><th>IRA W/D</th><th>Roth W/D</th>
+                <th>Tax Obligation</th><th>Net Worth Balance</th>
+            </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+    </table>
+</div>
+
+<script>
+let chartInstance = null;
+
+function addAccountRow(data = {}) {
+    const tbody = document.getElementById('accounts-body');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td><input type="text" class="acc-name" value="${data.name || 'New Account'}" oninput="autoRecalculate()"></td>
+        <td>
+            <select class="acc-type" onchange="autoRecalculate()">
+                <option value="Traditional" ${data.type === 'Traditional' ? 'selected' : ''}>Traditional</option>
+                <option value="Roth" ${data.type === 'Roth' ? 'selected' : ''}>Roth</option>
+                <option value="Brokerage" ${data.type === 'Brokerage' ? 'selected' : ''}>Brokerage</option>
+                <option value="Savings" ${data.type === 'Savings' ? 'selected' : ''}>Savings</option>
+            </select>
+        </td>
+        <td><input type="number" class="acc-balance" value="${data.balance ?? 100000}" oninput="autoRecalculate()"></td>
+        <td><input type="number" class="acc-basis" value="${data.basis ?? 0}" oninput="autoRecalculate()"></td>
+        <td><input type="number" class="acc-return" step="0.01" value="${data.return ?? 0.05}" oninput="autoRecalculate()"></td>
+        <td><input type="number" class="acc-div" step="0.01" value="${data.div ?? 0.00}" oninput="autoRecalculate()"></td>
+        <td>
+            <select class="acc-nua" onchange="autoRecalculate()">
+                <option value="No" ${data.nua === 'No' ? 'selected' : ''}>No</option>
+                <option value="Yes" ${data.nua === 'Yes' ? 'selected' : ''}>Yes</option>
+            </select>
+        </td>
+        <td><button class="btn btn-danger" onclick="deleteRow(this)">Delete</button></td>
+    `;
+    tbody.appendChild(row);
+    autoRecalculate();
+}
+
+function deleteRow(button) {
+    button.parentNode.parentNode.remove();
+    autoRecalculate();
+}
+
+function toggleTableDetails() {
+    const show = document.getElementById('detailsToggle').value === 'Yes';
+    document.querySelectorAll('#results-body tr').forEach(row => {
+        row.style.display = show ? 'table-row' : 'none';
+    });
+}
+
+function compileDataSnapshot() {
+    const snapshot = {
+        inputs: {
+            current_age: document.getElementById('current_age').value,
+            retirement_age: document.getElementById('retirement_age').value,
+            inflation_rate: document.getElementById('inflation_rate').value,
+            annual_spending: document.getElementById('annual_spending').value,
+            ordinary_tax_rate: document.getElementById('ordinary_tax_rate').value,
+            ltcg_tax_rate: document.getElementById('ltcg_tax_rate').value,
+            nua_enabled: document.getElementById('nua_enabled').value
+        },
+        accounts: []
+    };
+
+    const names = document.querySelectorAll('.acc-name');
+    const types = document.querySelectorAll('.acc-type');
+    const balances = document.querySelectorAll('.acc-balance');
+    const bases = document.querySelectorAll('.acc-basis');
+    const returns = document.querySelectorAll('.acc-return');
+    const divs = document.querySelectorAll('.acc-div');
+    const nuas = document.querySelectorAll('.acc-nua');
+
+    names.forEach((el, idx) => {
+        snapshot.accounts.push({
+            name: el.value,
+            type: types[idx].value,
+            balance: parseFloat(balances[idx].value) || 0,
+            basis: parseFloat(bases[idx].value) || 0,
+            return: parseFloat(returns[idx].value) || 0,
+            div: parseFloat(divs[idx].value) || 0,
+            nua: nuas[idx].value
+        });
+    });
+    return snapshot;
+}
+
+function exportToFile() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(compileDataSnapshot(), null, 4));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "retirement_profile.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+}
+
+function importFromFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            applySnapshotToUI(parsed);
+        } catch (err) {
+            alert("Error parsing file. Ensure it is a valid retirement backup profile.");
+        }
+    };
+    reader.readAsText(file);
+}
+
+function applySnapshotToUI(snapshot) {
+    if(!snapshot.inputs || !snapshot.accounts) return;
+    document.getElementById('current_age').value = snapshot.inputs.current_age;
+    document.getElementById('retirement_age').value = snapshot.inputs.retirement_age;
+    document.getElementById('inflation_rate').value = snapshot.inputs.inflation_rate;
+    document.getElementById('annual_spending').value = snapshot.inputs.annual_spending;
+    document.getElementById('ordinary_tax_rate').value = snapshot.inputs.ordinary_tax_rate;
+    document.getElementById('ltcg_tax_rate').value = snapshot.inputs.ltcg_tax_rate;
+    document.getElementById('nua_enabled').value = snapshot.inputs.nua_enabled;
+
+    document.getElementById('accounts-body').innerHTML = "";
+    snapshot.accounts.forEach(acc => addAccountRow(acc));
+}
+
+function autoRecalculate() {
+    const data = compileDataSnapshot();
+    
+    // Save state automatically to the browser history cache
+    localStorage.setItem('retirement_cache', JSON.stringify(data));
+
+    const curAge = parseInt(data.inputs.current_age) || 0;
+    const inflation = parseFloat(data.inputs.inflation_rate) || 0;
+    const spendingBase = parseFloat(data.inputs.annual_spending) || 0;
+    const ordTax = parseFloat(data.inputs.ordinary_tax_rate) || 0;
+    const ltcgTax = parseFloat(data.inputs.ltcg_tax_rate) || 0;
+
+    let initialNetWorth = data.accounts.reduce((sum, a) => sum + a.balance, 0);
+    let localAccounts = data.accounts.map(a => ({...a, rate: a.return + a.div}));
+    
+    let results = [];
+    let chartAges = [];
+    let chartNetWorths = [];
+    let nwAt80 = 0;
+
+    for(let yr = 1; yr <= 40; yr++) {
+        let age = curAge + (yr - 1);
+        let spendingNeed = spendingBase * Math.pow((1 + inflation), (yr - 1));
+        
+        let tradIRA = localAccounts.filter(a => a.type === "Traditional").reduce((sum, a) => sum + a.balance, 0);
+        let rmd = age >= 73 ? (tradIRA / (27.4 - (age - 73))) : 0;
+        if (rmd < 0 || isNaN(rmd)) rmd = 0;
+
+        let remNeed = spendingNeed;
+        let savingsWd = 0, brokerageWd = 0, iraWd = 0, rothWd = 0;
+
+        if(rmd > 0) {
+            let actualDistributedRmd = Math.min(rmd, tradIRA);
+            iraWd += actualDistributedRmd;
+            remNeed = Math.max(0, remNeed - actualDistributedRmd);
+            
+            let tempRmd = actualDistributedRmd;
+            for(let acc of localAccounts) {
+                if(acc.type === "Traditional" && acc.balance > 0) {
+                    let taken = Math.min(tempRmd, acc.balance);
+                    acc.balance -= taken;
+                    tempRmd -= taken;
+                }
+            }
+        }
+        
+        localAccounts.forEach(acc => {
+            if(remNeed <= 0 || acc.balance <= 0) return;
+            let pull = 0;
+            if(acc.type === "Savings") {
+                pull = Math.min(remNeed, acc.balance, 50000);
+                savingsWd += pull;
+            } else if(acc.type === "Brokerage") {
+                pull = Math.min(remNeed, acc.balance, 100000);
+                brokerageWd += pull;
+            } else if(acc.type === "Traditional") {
+                pull = Math.min(remNeed, acc.balance);
+                iraWd += pull;
+            } else if(acc.type === "Roth") {
+                pull = Math.min(remNeed, acc.balance);
+                rothWd += pull;
+            }
+            acc.balance -= pull;
+            remNeed -= pull;
+        });
+
+        let totalTax = (iraWd * ordTax) + (brokerageWd * 0.02 * ltcgTax);
+
+        localAccounts.forEach(acc => {
+            if(acc.balance > 0) acc.balance = acc.balance * (1 + acc.rate);
+        });
+
+        let currentNW = localAccounts.reduce((sum, a) => sum + a.balance, 0);
+        if(age === 80) nwAt80 = currentNW;
+
+        chartAges.push(`Age ${age}`);
+        chartNetWorths.push(currentNW);
+
+        results.push({
+            yr, age, spendingNeed, rmd, savingsWd, brokerageWd, iraWd, rothWd, totalTax, currentNW
+        });
+    }
+
+    // Connect dashboard summaries
+    const firstYear = results[0];
+    const totalWdYear1 = firstYear.savingsWd + firstYear.brokerageWd + firstYear.iraWd + firstYear.rothWd;
+    document.getElementById('stat-wd').innerText = `$${totalWdYear1.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+    
+    const surplus = totalWdYear1 - firstYear.spendingNeed;
+    const surplusEl = document.getElementById('stat-surplus');
+    surplusEl.innerText = `$${surplus.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+    surplusEl.style.color = surplus >= 0 ? "#059669" : "#dc2626";
+
+    document.getElementById('stat-nw-start').innerText = `$${initialNetWorth.toLocaleString()}`;
+    document.getElementById('stat-nw-80').innerText = `$${nwAt80.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+
+    // Output Data Rows
+    const tbody = document.getElementById('results-body');
+    tbody.innerHTML = "";
+    const showDetails = document.getElementById('detailsToggle').value === 'Yes';
+    
+    results.forEach(r => {
+        const row = document.createElement('tr');
+        if(!showDetails) row.style.display = 'none';
+        row.innerHTML = `
+            <td>${r.yr}</td><td>${r.age}</td>
+            <td>$${r.spendingNeed.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+            <td>$${r.rmd.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+            <td>$${r.savingsWd.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+            <td>$${r.brokerageWd.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+            <td>$${r.iraWd.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+            <td>$${r.rothWd.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+            <td>$${r.totalTax.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+            <td style="font-weight:bold; color:${r.currentNW > 0 ? '#1e3a8a':'#dc2626'}">$${r.currentNW.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    if (chartInstance) chartInstance.destroy();
+    const ctx = document.getElementById('canvasChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartAges,
+            datasets: [{
+                label: 'Simulated Net Worth Trajectory',
+                data: chartNetWorths,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, animation: { duration: 150 } }
+    });
+}
+
+// Initialization fallback logic sequence
+window.onload = function() {
+    const cached = localStorage.getItem('retirement_cache');
+    if(cached) {
+        applySnapshotToUI(JSON.parse(cached));
+    } else {
+        // Load clean initial state defaults
+        addAccountRow({name: 'Core 401k', type: 'Traditional', balance: 500000, basis: 0, return: 0.06, div: 0.01, nua: 'No'});
+    }
+};
+</script>
+</body>
+</html>
