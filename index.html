@@ -2,37 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retirement Engine v6 - Income Hierarchy Matrix</title>
+    <title>Retirement Engine v7 - Asset Liquidation Ledger</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2026.3.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 1800px; margin: 0 auto; background: #fff; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; }
+        .container { max-width: 1850px; margin: 0 auto; background: #fff; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; }
         h2, h3 { color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 30px; }
         h2 { margin-top:0; }
         .grid-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .input-group { display: flex; flex-direction: column; }
         .input-group label { font-size: 0.85rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
         .input-group input, .input-group select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
-        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.82rem; }
+        th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
         th { background-color: #e2e8f0; color: #1e3a8a; }
         .btn { background: #2563eb; color: white; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.2s; }
         .btn:hover { background: #1d4ed8; }
         .btn-secondary { background: #475569; }
         .btn-secondary:hover { background: #334155; }
-        #chart-wrapper { width: 100%; height: 400px; margin: 30px 0; }
-        .agi-highlight { background-color: #fef08a; font-weight: bold; color: #1e3a8a; }
-        .demand-highlight { background-color: #e0f2fe; font-weight: bold; color: #0369a1; }
-        .pretax-col { background-color: #fef2f2; }
-        .posttax-col { background-color: #f0fdf4; }
+        #chart-wrapper { width: 100%; height: 350px; margin: 25px 0; }
+        
+        /* Specific Multi-Column Highlights */
+        .section-demand { background-color: #e0f2fe; font-weight: 500; }
+        .section-sources { background-color: #fef9c3; }
+        .section-balances { background-color: #f0fdf4; }
+        .bold-total { font-weight: bold; background-color: #f8fafc; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Retirement Engine v6 (Ordinary Income Hierarchy & Cash Demand Model)</h2>
+    <h2>Retirement Engine v7 (Dynamic Asset Liquidation Ledger)</h2>
     
     <h3>Global Parameters & Policy Settings</h3>
     <div class="grid-inputs">
@@ -50,24 +52,24 @@
         </thead>
         <tbody id="income-floor-body">
             <tr>
-                <td><input type="text" class="floor-name" value="Social Security (Primary)"></td>
+                <td><input type="text" class="floor-name" value="Social Security Benefits"></td>
                 <td><input type="number" class="floor-start" value="67"></td>
                 <td><input type="number" class="floor-end" value="100"></td>
-                <td><input type="number" class="floor-amount" value="38000"></td>
+                <td><input type="number" class="floor-amount" value="40000"></td>
                 <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
             </tr>
             <tr>
-                <td><input type="text" class="floor-name" value="Corporate Pension Guarantee"></td>
+                <td><input type="text" class="floor-name" value="Guaranteed Fixed Pension"></td>
                 <td><input type="number" class="floor-start" value="65"></td>
                 <td><input type="number" class="floor-end" value="100"></td>
-                <td><input type="number" class="floor-amount" value="22000"></td>
+                <td><input type="number" class="floor-amount" value="20000"></td>
                 <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
             </tr>
         </tbody>
     </table>
     <button class="btn btn-secondary" style="margin-top:10px;" onclick="addFloorRow()">+ Add Fixed Income Floor Stream</button>
 
-    <h3>Level 3: Targeted Roth Conversion Schedule Template</h3>
+    <h3>Level 3: Strategic Roth Conversions</h3>
     <table id="conversions-table">
         <thead>
             <tr><th>Target Execution Age</th><th>Conversion Amount ($ Value)</th><th>Action</th></tr>
@@ -87,16 +89,16 @@
     </table>
     <button class="btn btn-secondary" style="margin-top:10px;" onclick="addConversionRow()">+ Add Targeted Roth Conversion Event</button>
 
-    <h3>Custom Capital Outlays (Drives Cash Demand)</h3>
+    <h3>Custom Capital Outlays (Drives Cash Demand Peaks)</h3>
     <table id="outlays-table">
         <thead>
             <tr><th>Expense Description Template</th><th>Target Age</th><th>Cost Today ($)</th><th>Action</th></tr>
         </thead>
         <tbody id="outlays-body">
             <tr>
-                <td><input type="text" class="outlay-name" value="Home Renovation / Repair Allocation"></td>
+                <td><input type="text" class="outlay-name" value="Vehicle Replacement Lifecycle"></td>
                 <td><input type="number" class="outlay-age" value="68"></td>
-                <td><input type="number" class="outlay-amount" value="60000"></td>
+                <td><input type="number" class="outlay-amount" value="55000"></td>
                 <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
             </tr>
         </tbody>
@@ -110,27 +112,35 @@
         </thead>
         <tbody id="accounts-body">
             <tr>
-                <td><input type="text" class="acc-name" value="Pre-Tax Traditional IRA Core"></td>
+                <td><input type="text" class="acc-name" value="Pre-Tax Traditional 401k/IRA"></td>
                 <td><select class="acc-type"><option value="Traditional" selected>Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash">Cash/HYSA (Taxable)</option></select></td>
-                <td><input type="number" class="acc-balance" value="1300000"></td>
+                <td><input type="number" class="acc-balance" value="1250000"></td>
                 <td><input type="number" class="acc-basis" value="0"></td>
                 <td><input type="number" class="acc-return" step="0.01" value="0.065"></td>
                 <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
             </tr>
             <tr>
-                <td><input type="text" class="acc-name" value="Roth IRA Supplemental Account"></td>
+                <td><input type="text" class="acc-name" value="Roth IRA Account"></td>
                 <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth" selected>Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash">Cash/HYSA (Taxable)</option></select></td>
-                <td><input type="number" class="acc-balance" value="250000"></td>
-                <td><input type="number" class="acc-basis" value="250000"></td>
-                <td><input type="number" class="acc-return" step="0.01" value="0.07"></td>
+                <td><input type="number" class="acc-balance" value="200000"></td>
+                <td><input type="number" class="acc-basis" value="200000"></td>
+                <td><input type="number" class="acc-return" step="0.01" value="0.070"></td>
                 <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
             </tr>
             <tr>
-                <td><input type="text" class="acc-name" value="Joint Taxable Brokerage Account"></td>
+                <td><input type="text" class="acc-name" value="Taxable Mutual Fund Brokerage"></td>
                 <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash/HYSA (Taxable)</option></select></td>
-                <td><input type="number" class="acc-balance" value="450000"></td>
-                <td><input type="number" class="acc-basis" value="290000"></td>
-                <td><input type="number" class="acc-return" step="0.01" value="0.06"></td>
+                <td><input type="number" class="acc-balance" value="400000"></td>
+                <td><input type="number" class="acc-basis" value="250000"></td>
+                <td><input type="number" class="acc-return" step="0.01" value="0.060"></td>
+                <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
+            </tr>
+            <tr>
+                <td><input type="text" class="acc-name" value="HYSA Savings / Liquid Cash"></td>
+                <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash" selected>Cash/HYSA (Taxable)</option></select></td>
+                <td><input type="number" class="acc-balance" value="80000"></td>
+                <td><input type="number" class="acc-basis" value="80000"></td>
+                <td><input type="number" class="acc-return" step="0.01" value="0.040"></td>
                 <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
             </tr>
         </tbody>
@@ -143,15 +153,26 @@
 
     <div id="chart-wrapper"><canvas id="canvasChart"></canvas></div>
 
-    <h3>Comprehensive Income Hierarchy & Cash Demand Log</h3>
+    <h3>Granular Liquidation Audit & Account Ledger Projections</h3>
     <table>
         <thead>
             <tr>
-                <th>Year</th><th>Age</th><th class="demand-highlight">Realized Cash Demand</th><th>Level 1 Floor Revenue</th><th>Level 2 Forced RMD</th><th>Level 3 Extractions</th><th>Realized Cap Gains</th><th class="agi-highlight">Calculated AGI</th><th>Tax Bill Friction</th><th>Ending Net Worth</th>
+                <th colspan="2">Timeline</th>
+                <th colspan="2" class="section-demand">Cash Requirements</th>
+                <th colspan="3" class="section-sources">Supplemental Funding Sources Needed</th>
+                <th colspan="4" class="section-balances">Year-End Portfolio Balances (After Growth)</th>
+                <th colspan="2">Tax Metrics</th>
+            </tr>
+            <tr>
+                <th>Yr</th><th>Age</th>
+                <th class="section-demand">Cash Demand</th><th class="section-demand">Deficit After RMD/Floor</th>
+                <th class="section-sources">From Taxable Cash</th><th class="section-sources">From Brokerage CapGains</th><th class="section-sources">From Pre/Post Portfolio</th>
+                <th class="section-balances">Cash/HYSA</th><th class="section-balances">Brokerage</th><th class="section-balances">Pre-Tax Trad</th><th class="section-balances">Post-Tax Roth</th>
+                <th>Calculated AGI</th><th>Tax Paid</th>
             </tr>
         </thead>
         <tbody id="results-body">
-            <tr><td colspan="10" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
+            <tr><td colspan="13" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
         </tbody>
     </table>
 </div>
@@ -196,7 +217,6 @@ def run_simulation_isolated():
         spending_base = safe_float('annual_spending', 95000)
         filing_status = document.getElementById('filing_status').value
         
-        # Parse Level 1 Floor Revenue Matrix
         f_names = document.querySelectorAll('.floor-name')
         f_starts = document.querySelectorAll('.floor-start')
         f_ends = document.querySelectorAll('.floor-end')
@@ -210,7 +230,6 @@ def run_simulation_isolated():
                 'amount': float(f_amounts[idx].value or 0)
             })
 
-        # Parse Level 3 Conversions
         conv_ages = document.querySelectorAll('.conv-age')
         conv_amounts = document.querySelectorAll('.conv-amount')
         scheduled_conversions = {}
@@ -219,7 +238,6 @@ def run_simulation_isolated():
             amt = float(conv_amounts[idx].value or 0)
             scheduled_conversions[age] = scheduled_conversions.get(age, 0.0) + amt
 
-        # Parse Custom Outlays
         outlay_ages = document.querySelectorAll('.outlay-age')
         outlay_amounts = document.querySelectorAll('.outlay-amount')
         custom_outlays = {}
@@ -228,7 +246,6 @@ def run_simulation_isolated():
             amt = float(outlay_amounts[idx].value or 0)
             custom_outlays[age] = custom_outlays.get(age, 0.0) + amt
 
-        # Parse Accounts
         names = document.querySelectorAll('.acc-name')
         types = document.querySelectorAll('.acc-type')
         balances = document.querySelectorAll('.acc-balance')
@@ -252,33 +269,32 @@ def run_simulation_isolated():
         for yr in range(1, 41):
             age = cur_age + yr - 1
             
-            # Formulating Cash Demand Outflow Metric
             base_need = spending_base * ((1 + inflation) ** (yr - 1)) if age >= ret_age else 0
             shock_need = custom_outlays.get(age, 0.0) * ((1 + inflation) ** (yr - 1))
             realized_cash_demand = base_need + shock_need
 
-            # Evaluating Level 1 Non-Controllable Income
             current_year_floor = 0.0
             for item in income_floors:
                 if item['start'] <= age <= item['end']:
                     current_year_floor += item['amount'] * ((1 + inflation) ** (yr - 1))
 
-            # Evaluating Level 2 Pre-Tax RMD Obligations
             trad_total = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
             rmd_divisor = (27.4 - (age - 73)) if age >= 73 else 0
             rmd_requirement = (trad_total / rmd_divisor) if rmd_divisor > 0 else 0
 
-            # Tax Matrix Income Tracks
             ordinary_income_flow = current_year_floor + rmd_requirement
             capital_gains_realized = 0
-            level3_extractions = 0.0
             
+            # Liquidation Metric Sub-Tracks for Audit Presentation
+            sourced_from_cash_principal = 0.0
+            sourced_from_brokerage_capgains = 0.0
+            sourced_from_portfolio_remainder = 0.0
+
             # Execute Active Level 3 Conversions
             target_conversion = scheduled_conversions.get(age, 0.0)
             if target_conversion > 0 and trad_total > 0:
                 actual_conv = min(target_conversion, trad_total)
                 ordinary_income_flow += actual_conv
-                
                 rem_conv = actual_conv
                 for acc in accounts:
                     if acc['type'] == 'Traditional' and acc['balance'] > 0:
@@ -290,7 +306,7 @@ def run_simulation_isolated():
                         acc['balance'] += actual_conv
                         break
 
-            # Settle forced RMD account tracking liquidations
+            # Process Forced RMD Withdrawal Outflow
             rem_rmd = rmd_requirement
             for acc in accounts:
                 if acc['type'] == 'Traditional' and acc['balance'] > 0:
@@ -298,10 +314,11 @@ def run_simulation_isolated():
                     acc['balance'] -= withdrawn
                     rem_rmd -= withdrawn
 
-            # Gauge deficits left to solve after applying non-controllable floor and forced RMDs
-            remaining_net_cash_needed = max(0, realized_cash_demand - (current_year_floor + rmd_requirement))
+            # Evaluate net residual cash demand left to fund via liquidation loop
+            net_deficit_after_forced = max(0, realized_cash_demand - (current_year_floor + rmd_requirement))
+            remaining_net_cash_needed = net_deficit_after_forced
             
-            # Strategic Drawdown Execution System
+            # Liquidation Engine Tracking Outflow Sequence
             liquidation_sequence = ['Cash', 'Brokerage', 'Traditional', 'Roth']
             for current_type in liquidation_sequence:
                 if remaining_net_cash_needed <= 0: break
@@ -309,28 +326,28 @@ def run_simulation_isolated():
                     if acc['type'] == current_type and acc['balance'] > 0:
                         pull = min(remaining_net_cash_needed, acc['balance'])
                         
-                        if current_type == 'Brokerage':
+                        if current_type == 'Cash':
+                            sourced_from_cash_principal += pull
+                        elif current_type == 'Brokerage':
                             gain_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
-                            capital_gains_realized += pull * gain_ratio
+                            allocated_gain = pull * gain_ratio
+                            capital_gains_realized += allocated_gain
+                            sourced_from_brokerage_capgains += allocated_gain
                             acc['basis'] -= (pull * (1.0 - gain_ratio))
-                        elif current_type == 'Traditional':
-                            ordinary_income_flow += pull
-                            level3_extractions += pull
-                        elif current_type == 'Roth':
-                            level3_extractions += pull
+                        elif current_type in ['Traditional', 'Roth']:
+                            sourced_from_portfolio_remainder += pull
+                            if current_type == 'Traditional':
+                                ordinary_income_flow += pull
                             
                         acc['balance'] -= pull
                         remaining_net_cash_needed -= pull
 
-            # AGI Formula Execution
             calculated_agi = ordinary_income_flow + capital_gains_realized
-
-            # Calculate Progressive Tax Liabilities
             ordinary_tax = calculate_progressive_tax(ordinary_income_flow, filing_status)
             capital_gains_tax = capital_gains_realized * 0.15
             total_tax_bill = ordinary_tax + capital_gains_tax
 
-            # Settle Tax Friction
+            # Deduct Tax Bill Friction From Liquid Accounts
             rem_tax = total_tax_bill
             for acc in accounts:
                 if rem_tax <= 0: break
@@ -339,7 +356,7 @@ def run_simulation_isolated():
                     acc['balance'] -= pull
                     rem_tax -= pull
 
-            # Process Capital Growth Formulas
+            # Process Growth Updates
             for acc in accounts:
                 if acc['balance'] > 0:
                     growth = acc['balance'] * acc['rate']
@@ -347,21 +364,30 @@ def run_simulation_isolated():
                     if acc['type'] in ['Brokerage', 'Cash']:
                         acc['basis'] += growth * 0.4
 
+            # Aggregate Dynamic Balances For Current Column Audit
+            end_cash = sum(a['balance'] for a in accounts if a['type'] == 'Cash')
+            end_brokerage = sum(a['balance'] for a in accounts if a['type'] == 'Brokerage')
+            end_pretax = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
+            end_posttax = sum(a['balance'] for a in accounts if a['type'] == 'Roth')
             ending_net_worth = sum(a['balance'] for a in accounts)
+            
             chart_labels.append(f"Age {age}")
             chart_data.append(ending_net_worth)
 
             outputs.append(f"""
                 <tr>
                     <td>{yr}</td><td>{age}</td>
-                    <td class='demand-highlight'>${realized_cash_demand:,.0f}</td>
-                    <td>${current_year_floor:,.0f}</td>
-                    <td style='color:#b45309;'>${rmd_requirement:,.0f}</td>
-                    <td>${level3_extractions:,.0f}</td>
-                    <td>${capital_gains_realized:,.0f}</td>
-                    <td class='agi-highlight'>${calculated_agi:,.0f}</td>
+                    <td class='section-demand'>${realized_cash_demand:,.0f}</td>
+                    <td class='section-demand' style='color:#0284c7; font-weight:600;'>${net_deficit_after_forced:,.0f}</td>
+                    <td class='section-sources'>${sourced_from_cash_principal:,.0f}</td>
+                    <td class='section-sources' style='color:#16a34a;'>${sourced_from_brokerage_capgains:,.0f}</td>
+                    <td class='section-sources'>${sourced_from_portfolio_remainder:,.0f}</td>
+                    <td class='section-balances'>${end_cash:,.0f}</td>
+                    <td class='section-balances'>${end_brokerage:,.0f}</td>
+                    <td class='section-balances' style='color:#b45309;'>${end_pretax:,.0f}</td>
+                    <td class='section-balances' style='color:#16a34a;'>${end_posttax:,.0f}</td>
+                    <td style='font-weight:600;'>${calculated_agi:,.0f}</td>
                     <td style='color:#dc2626;'>${total_tax_bill:,.0f}</td>
-                    <td style='font-weight:bold;'>${ending_net_worth:,.0f}</td>
                 </tr>
             """)
 
@@ -378,10 +404,10 @@ function addFloorRow() {
     const tbody = document.getElementById('income-floor-body');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-        <td><input type="text" class="floor-name" value="Annuity / Supplemental Floor"></td>
+        <td><input type="text" class="floor-name" value="Supplemental Income Stream"></td>
         <td><input type="number" class="floor-start" value="65"></td>
         <td><input type="number" class="floor-end" value="100"></td>
-        <td><input type="number" class="floor-amount" value="15000"></td>
+        <td><input type="number" class="floor-amount" value="10000"></td>
         <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
     `;
     tbody.appendChild(tr);
@@ -392,7 +418,7 @@ function addConversionRow() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
         <td><input type="number" class="conv-age" value="65"></td>
-        <td><input type="number" class="conv-amount" value="50000"></td>
+        <td><input type="number" class="conv-amount" value="40000"></td>
         <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
     `;
     tbody.appendChild(tr);
@@ -402,9 +428,9 @@ function addOutlayRow() {
     const tbody = document.getElementById('outlays-body');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-        <td><input type="text" class="outlay-name" value="New Capital Event"></td>
-        <td><input type="number" class="outlay-age" value="70"></td>
-        <td><input type="number" class="outlay-amount" value="25000"></td>
+        <td><input type="text" class="outlay-name" value="Capital Expense Event"></td>
+        <td><input type="number" class="outlay-age" value="72"></td>
+        <td><input type="number" class="outlay-amount" value="30000"></td>
         <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
     `;
     tbody.appendChild(tr);
@@ -416,8 +442,8 @@ function addAccountRow() {
     tr.innerHTML = `
         <td><input type="text" class="acc-name" value="Supplemental Account"></td>
         <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash" selected>Cash/HYSA (Taxable)</option></select></td>
-        <td><input type="number" class="acc-balance" value="50000"></td>
-        <td><input type="number" class="acc-basis" value="50000"></td>
+        <td><input type="number" class="acc-balance" value="25000"></td>
+        <td><input type="number" class="acc-basis" value="25000"></td>
         <td><input type="number" class="acc-return" step="0.01" value="0.04"></td>
         <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
     `;
