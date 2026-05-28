@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retirement Engine v7 - Asset Liquidation Ledger</title>
+    <title>Retirement Engine v8 - Asset Liquidation & Conversion Ledger</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2026.3.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -24,17 +24,18 @@
         .btn-secondary:hover { background: #334155; }
         #chart-wrapper { width: 100%; height: 350px; margin: 25px 0; }
         
-        /* Specific Multi-Column Highlights */
+        /* Multi-Column Highlight Sections */
         .section-demand { background-color: #e0f2fe; font-weight: 500; }
         .section-sources { background-color: #fef9c3; }
         .section-balances { background-color: #f0fdf4; }
+        .section-metrics { background-color: #faf5ff; }
         .bold-total { font-weight: bold; background-color: #f8fafc; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Retirement Engine v7 (Dynamic Asset Liquidation Ledger)</h2>
+    <h2>Retirement Engine v8 (Dynamic Asset Liquidation Ledger)</h2>
     
     <h3>Global Parameters & Policy Settings</h3>
     <div class="grid-inputs">
@@ -43,6 +44,16 @@
         <div class="input-group"><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.01" value="0.03"></div>
         <div class="input-group"><label>Base Annual Spending Need</label><input type="number" id="annual_spending" value="95000"></div>
         <div class="input-group"><label>Filing Status</label><select id="filing_status"><option value="MFJ" selected>Married Filing Jointly</option><option value="Single">Single</option></select></div>
+        <div class="input-group">
+            <label>Max Targeted Tax Bracket Cap</label>
+            <select id="target_bracket">
+                <option value="0.10">10% Bracket Limit</option>
+                <option value="0.12" selected>12% Bracket Limit</option>
+                <option value="0.22">22% Bracket Limit</option>
+                <option value="0.24">24% Bracket Limit</option>
+                <option value="0.32">32% Bracket Limit</option>
+            </select>
+        </div>
     </div>
 
     <h3>Level 1 Ordinary Income: Non-Controllable Revenue Floor</h3>
@@ -69,7 +80,7 @@
     </table>
     <button class="btn btn-secondary" style="margin-top:10px;" onclick="addFloorRow()">+ Add Fixed Income Floor Stream</button>
 
-    <h3>Level 3: Strategic Roth Conversions</h3>
+    <h3>Level 3: Custom Pre-Scheduled Strategic Roth Conversions (Manual Events)</h3>
     <table id="conversions-table">
         <thead>
             <tr><th>Target Execution Age</th><th>Conversion Amount ($ Value)</th><th>Action</th></tr>
@@ -77,12 +88,7 @@
         <tbody id="conversions-body">
             <tr>
                 <td><input type="number" class="conv-age" value="62"></td>
-                <td><input type="number" class="conv-amount" value="50000"></td>
-                <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
-            </tr>
-            <tr>
-                <td><input type="number" class="conv-age" value="63"></td>
-                <td><input type="number" class="conv-amount" value="50000"></td>
+                <td><input type="number" class="conv-amount" value="20000"></td>
                 <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
             </tr>
         </tbody>
@@ -159,20 +165,20 @@
             <tr>
                 <th colspan="2">Timeline</th>
                 <th colspan="2" class="section-demand">Cash Requirements</th>
-                <th colspan="3" class="section-sources">Supplemental Funding Sources Needed</th>
+                <th colspan="3" class="section-sources">Supplemental Funding Sources</th>
                 <th colspan="4" class="section-balances">Year-End Portfolio Balances (After Growth)</th>
-                <th colspan="2">Tax Metrics</th>
+                <th colspan="3" class="section-metrics">Tax & Conversion Metrics</th>
             </tr>
             <tr>
                 <th>Yr</th><th>Age</th>
-                <th class="section-demand">Cash Demand</th><th class="section-demand">Deficit After RMD/Floor</th>
-                <th class="section-sources">From Taxable Cash</th><th class="section-sources">From Brokerage CapGains</th><th class="section-sources">From Pre/Post Portfolio</th>
+                <th class="section-demand">Cash Demand</th><th class="section-demand">Deficit After Floor</th>
+                <th class="section-sources">From Taxable Cash</th><th class="section-sources">From Brokerage</th><th class="section-sources">From Pre/Post Port</th>
                 <th class="section-balances">Cash/HYSA</th><th class="section-balances">Brokerage</th><th class="section-balances">Pre-Tax Trad</th><th class="section-balances">Post-Tax Roth</th>
-                <th>Calculated AGI</th><th>Tax Paid</th>
+                <th class="section-metrics">Calculated RMD</th><th class="section-metrics">Roth Conv. Made</th><th class="section-metrics">AGI / Tax Paid</th>
             </tr>
         </thead>
         <tbody id="results-body">
-            <tr><td colspan="13" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
+            <tr><td colspan="14" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
         </tbody>
     </table>
 </div>
@@ -195,12 +201,22 @@ def safe_int(element_id, default=0):
     val = document.getElementById(element_id).value.strip()
     return int(val) if val else default
 
+def get_bracket_max_income(status, target_rate):
+    brackets = TAX_BRACKETS[status]
+    deduction = STANDARD_DEDUCTION[status]
+    limit_taxable = 0.0
+    for limit, rate in brackets:
+        if abs(rate - target_rate) < 0.001:
+            limit_taxable = limit
+            break
+    return limit_taxable + deduction
+
 def calculate_progressive_tax(income, status):
     taxable_income = max(0, income - STANDARD_DEDUCTION[status])
     if taxable_income <= 0: return 0
     tax = 0
     previous_limit = 0
-    for limit, rate in TAX_BRACKETS[status]:
+    for limit, rate in brackets := TAX_BRACKETS[status]:
         if taxable_income > limit:
             tax += (limit - previous_limit) * rate
             previous_limit = limit
@@ -216,6 +232,7 @@ def run_simulation_isolated():
         inflation = safe_float('inflation_rate', 0.03)
         spending_base = safe_float('annual_spending', 95000)
         filing_status = document.getElementById('filing_status').value
+        target_bracket_rate = float(document.getElementById('target_bracket').value)
         
         f_names = document.querySelectorAll('.floor-name')
         f_starts = document.querySelectorAll('.floor-start')
@@ -278,35 +295,21 @@ def run_simulation_isolated():
                 if item['start'] <= age <= item['end']:
                     current_year_floor += item['amount'] * ((1 + inflation) ** (yr - 1))
 
+            # Calculate explicit RMD rules
             trad_total = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
             rmd_divisor = (27.4 - (age - 73)) if age >= 73 else 0
             rmd_requirement = (trad_total / rmd_divisor) if rmd_divisor > 0 else 0
 
+            # Base structural ordinary income setup
             ordinary_income_flow = current_year_floor + rmd_requirement
             capital_gains_realized = 0
             
-            # Liquidation Metric Sub-Tracks for Audit Presentation
             sourced_from_cash_principal = 0.0
             sourced_from_brokerage_capgains = 0.0
             sourced_from_portfolio_remainder = 0.0
+            total_conversions_this_year = 0.0
 
-            # Execute Active Level 3 Conversions
-            target_conversion = scheduled_conversions.get(age, 0.0)
-            if target_conversion > 0 and trad_total > 0:
-                actual_conv = min(target_conversion, trad_total)
-                ordinary_income_flow += actual_conv
-                rem_conv = actual_conv
-                for acc in accounts:
-                    if acc['type'] == 'Traditional' and acc['balance'] > 0:
-                        transfer = min(rem_conv, acc['balance'])
-                        acc['balance'] -= transfer
-                        rem_conv -= transfer
-                for acc in accounts:
-                    if acc['type'] == 'Roth':
-                        acc['balance'] += actual_conv
-                        break
-
-            # Process Forced RMD Withdrawal Outflow
+            # Process RMD Outflow Deductions first
             rem_rmd = rmd_requirement
             for acc in accounts:
                 if acc['type'] == 'Traditional' and acc['balance'] > 0:
@@ -314,49 +317,108 @@ def run_simulation_isolated():
                     acc['balance'] -= withdrawn
                     rem_rmd -= withdrawn
 
-            # Evaluate net residual cash demand left to fund via liquidation loop
+            # Evaluate net residual cash demand left to fund via cash flow routing
             net_deficit_after_forced = max(0, realized_cash_demand - (current_year_floor + rmd_requirement))
             remaining_net_cash_needed = net_deficit_after_forced
-            
+
             # Liquidation Engine Tracking Outflow Sequence
-            liquidation_sequence = ['Cash', 'Brokerage', 'Traditional', 'Roth']
+            liquidation_sequence = ['Cash', 'Brokerage']
             for current_type in liquidation_sequence:
                 if remaining_net_cash_needed <= 0: break
                 for acc in accounts:
                     if acc['type'] == current_type and acc['balance'] > 0:
                         pull = min(remaining_net_cash_needed, acc['balance'])
-                        
                         if current_type == 'Cash':
                             sourced_from_cash_principal += pull
                         elif current_type == 'Brokerage':
                             gain_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
                             allocated_gain = pull * gain_ratio
                             capital_gains_realized += allocated_gain
-                            sourced_from_brokerage_capgains += allocated_gain
+                            sourced_from_brokerage_capgains += pull
                             acc['basis'] -= (pull * (1.0 - gain_ratio))
-                        elif current_type in ['Traditional', 'Roth']:
-                            sourced_from_portfolio_remainder += pull
-                            if current_type == 'Traditional':
-                                ordinary_income_flow += pull
-                            
                         acc['balance'] -= pull
                         remaining_net_cash_needed -= pull
 
+            # Check if Pre-Tax assets are required to finish funding cash needs
+            if remaining_net_cash_needed > 0:
+                for acc in accounts:
+                    if acc['type'] == 'Traditional' and acc['balance'] > 0:
+                        pull = min(remaining_net_cash_needed, acc['balance'])
+                        ordinary_income_flow += pull
+                        sourced_from_portfolio_remainder += pull
+                        acc['balance'] -= pull
+                        remaining_net_cash_needed -= pull
+
+            # Fallback to Roth for basic spending deficit if everything else is dry
+            if remaining_net_cash_needed > 0:
+                for acc in accounts:
+                    if acc['type'] == 'Roth' and acc['balance'] > 0:
+                        pull = min(remaining_net_cash_needed, acc['balance'])
+                        sourced_from_portfolio_remainder += pull
+                        acc['balance'] -= pull
+                        remaining_net_cash_needed -= pull
+
+            # --- STRATEGIC BRACKET MAXIMIZATION MATRIX ---
+            # Dynamically calculate maximum room left in the chosen tax bracket 
+            max_income_allowed = get_bracket_max_income(filing_status, target_bracket_rate)
+            available_bracket_room = max(0.0, max_income_allowed - ordinary_income_flow)
+            
+            # 1. First accommodate pre-scheduled manual conversions
+            manual_conv_target = scheduled_conversions.get(age, 0.0)
+            current_trad_balance = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
+            
+            if manual_conv_target > 0 and current_trad_balance > 0:
+                actual_manual_conv = min(manual_conv_target, current_trad_balance)
+                ordinary_income_flow += actual_manual_conv
+                total_conversions_this_year += actual_manual_conv
+                # Deduct from Pre-Tax
+                temp_rem = actual_manual_conv
+                for acc in accounts:
+                    if acc['type'] == 'Traditional' and acc['balance'] > 0:
+                        amt = min(temp_rem, acc['balance'])
+                        acc['balance'] -= amt
+                        temp_rem -= amt
+                # Track bracket allocation space correction
+                available_bracket_room = max(0.0, max_income_allowed - ordinary_income_flow)
+
+            # 2. Automatically Max Out Remaining Tax Bracket Space using conversions
+            current_trad_balance = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
+            if available_bracket_room > 0 and current_trad_balance > 0:
+                auto_conversion = min(available_bracket_room, current_trad_balance)
+                ordinary_income_flow += auto_conversion
+                total_conversions_this_year += auto_conversion
+                
+                temp_rem = auto_conversion
+                for acc in accounts:
+                    if acc['type'] == 'Traditional' and acc['balance'] > 0:
+                        amt = min(temp_rem, acc['balance'])
+                        acc['balance'] -= amt
+                        temp_rem -= amt
+
+            # Add converted components straight to the destination Roth engine asset pool
+            if total_conversions_this_year > 0:
+                for acc in accounts:
+                    if acc['type'] == 'Roth':
+                        acc['balance'] += total_conversions_this_year
+                        break
+
+            # Core final tax computation processing
             calculated_agi = ordinary_income_flow + capital_gains_realized
             ordinary_tax = calculate_progressive_tax(ordinary_income_flow, filing_status)
             capital_gains_tax = capital_gains_realized * 0.15
             total_tax_bill = ordinary_tax + capital_gains_tax
 
-            # Deduct Tax Bill Friction From Liquid Accounts
+            # Deduct Tax Friction from remaining available liquid wrappers
             rem_tax = total_tax_bill
-            for acc in accounts:
+            for wrapper_pref in ['Cash', 'Brokerage', 'Roth']:
                 if rem_tax <= 0: break
-                if acc['balance'] > 0:
-                    pull = min(rem_tax, acc['balance'])
-                    acc['balance'] -= pull
-                    rem_tax -= pull
+                for acc in accounts:
+                    if acc['type'] == wrapper_pref and acc['balance'] > 0:
+                        pull = min(rem_tax, acc['balance'])
+                        acc['balance'] -= pull
+                        rem_tax -= pull
 
-            # Process Growth Updates
+            # Process Compound Market Growth updates
             for acc in accounts:
                 if acc['balance'] > 0:
                     growth = acc['balance'] * acc['rate']
@@ -364,7 +426,7 @@ def run_simulation_isolated():
                     if acc['type'] in ['Brokerage', 'Cash']:
                         acc['basis'] += growth * 0.4
 
-            # Aggregate Dynamic Balances For Current Column Audit
+            # Aggregate Dynamic Balances For Detailed Columns Ledger
             end_cash = sum(a['balance'] for a in accounts if a['type'] == 'Cash')
             end_brokerage = sum(a['balance'] for a in accounts if a['type'] == 'Brokerage')
             end_pretax = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
@@ -384,10 +446,11 @@ def run_simulation_isolated():
                     <td class='section-sources'>${sourced_from_portfolio_remainder:,.0f}</td>
                     <td class='section-balances'>${end_cash:,.0f}</td>
                     <td class='section-balances'>${end_brokerage:,.0f}</td>
-                    <td class='section-balances' style='color:#b45309;'>${end_pretax:,.0f}</td>
-                    <td class='section-balances' style='color:#16a34a;'>${end_posttax:,.0f}</td>
-                    <td style='font-weight:600;'>${calculated_agi:,.0f}</td>
-                    <td style='color:#dc2626;'>${total_tax_bill:,.0f}</td>
+                    <td class='section-balances' style='color:#b45309; font-weight:600;'>${end_pretax:,.0f}</td>
+                    <td class='section-balances' style='color:#16a34a; font-weight:600;'>${end_posttax:,.0f}</td>
+                    <td class='section-metrics' style='color:#7c3aed;'>${rmd_requirement:,.0f}</td>
+                    <td class='section-metrics' style='color:#2563eb; font-weight:600;'>${total_conversions_this_year:,.0f}</td>
+                    <td><span style='font-weight:600;'>${calculated_agi:,.0f}</span> / <span style='color:#dc2626;'>${total_tax_bill:,.0f}</span></td>
                 </tr>
             """)
 
