@@ -2,79 +2,77 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retirement Engine v10 - Advanced Pro Strategic Matrix</title>
+    <title>Retirement Engine v11 - Max Density Pro Matrix</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2026.3.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; color: #1e293b; margin: 0; padding: 12px; font-size: 13px; }
-        .container { max-width: 100%; margin: 0 auto; background: #fff; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 6px; overflow-x: hidden; }
-        h3 { color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; margin: 15px 0 8px 0; font-size: 1rem; }
-        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 12px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 8px; font-size: 11px; }
+        .container { max-width: 100%; margin: 0 auto; background: #fff; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 4px; }
+        h3 { color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin: 8px 0 4px 0; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; margin-bottom: 8px; background: #f1f5f9; padding: 6px; border-radius: 4px; }
         .input-group { display: flex; flex-direction: column; }
-        .input-group label { font-size: 0.75rem; font-weight: 600; color: #475569; margin-bottom: 3px; }
-        .input-group input, .input-group select { padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-size: 0.8rem; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.78rem; table-layout: auto; }
-        th, td { border: 1px solid #cbd5e1; padding: 4px 5px; text-align: left; white-space: nowrap; }
-        th { background-color: #f1f5f9; color: #1e3a8a; font-weight: 600; }
-        .btn { background: #2563eb; color: white; border: none; padding: 6px 12px; font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 0.8rem; }
+        .input-group label { font-size: 0.7rem; font-weight: 700; color: #334155; margin-bottom: 1px; }
+        .input-group input, .input-group select { padding: 3px; border: 1px solid #94a3b8; border-radius: 3px; font-size: 0.75rem; background: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 0.72rem; }
+        th, td { border: 1px solid #cbd5e1; padding: 2px 4px; text-align: right; white-space: nowrap; }
+        th { background-color: #e2e8f0; color: #0f172a; font-weight: 700; text-align: center; }
+        .btn { background: #2563eb; color: white; border: none; padding: 4px 8px; font-weight: bold; cursor: pointer; border-radius: 3px; font-size: 0.75rem; }
         .btn:hover { background: #1d4ed8; }
-        .btn-secondary { background: #64748b; }
-        .btn-secondary:hover { background: #475569; }
-        #chart-wrapper { width: 100%; height: 280px; margin: 15px 0; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 4px; }
+        #chart-wrapper { width: 100%; height: 180px; margin: 8px 0; background: #fafafa; border: 1px solid #cbd5e1; border-radius: 3px; }
         .section-demand { background-color: #f0f9ff; }
         .section-sources { background-color: #fefecb; }
         .section-balances { background-color: #f0fdf4; }
         .section-metrics { background-color: #faf5ff; }
-        input[type="text"], input[type="number"] { width: 90%; box-sizing: border-box; padding: 3px; }
+        input[type="text"], input[type="number"] { width: 100%; box-sizing: border-box; padding: 2px; font-size: 0.72rem; text-align: left; }
+        .txt-left { text-align: left; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; background: #1e3a8a; color: white; padding: 8px 15px; border-radius: 4px;">
-        <span style="font-weight: bold; font-size: 1.1rem;">Retirement Matrix Wealth Engine v10</span>
-        <div style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" style="background:#0ea5e9" onclick="saveToBrowserStorage()">💾 Save Scenario</button>
-            <button class="btn btn-secondary" onclick="loadFromBrowserStorage()">📂 Load Scenario</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; background: #1e3a8a; color: white; padding: 4px 10px; border-radius: 3px;">
+        <span style="font-weight: bold; font-size: 0.9rem;">Retirement Matrix Wealth Engine v11 [Optimized Fit]</span>
+        <div style="display: flex; gap: 6px;">
+            <button class="btn" style="background:#0ea5e9; padding: 2px 6px;" onclick="saveToBrowserStorage()">💾 Save</button>
+            <button class="btn" style="background:#64748b; padding: 2px 6px;" onclick="loadFromBrowserStorage()">📂 Load</button>
         </div>
     </div>
 
-    <h3>Global Strategic Parameters (2026 Tax Code Verified)</h3>
+    <h3>Strategic System Controls</h3>
     <div class="grid-inputs">
         <div class="input-group"><label>Current Age</label><input type="number" id="current_age" value="62"></div>
         <div class="input-group"><label>Retirement Age</label><input type="number" id="retirement_age" value="66"></div>
         <div class="input-group"><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.005" value="0.03"></div>
-        <div class="input-group"><label>Base Living Need Today ($)</label><input type="number" id="annual_spending" value="95000"></div>
-        <div class="input-group"><label>Filing Status</label><select id="filing_status"><option value="MFJ" selected>Married Joint (MFJ)</option><option value="Single">Single Filings</option></select></div>
+        <div class="input-group"><label>Base Need Today ($)</label><input type="number" id="annual_spending" value="95000"></div>
+        <div class="input-group"><label>Cash Buffer (Yrs)</label><select id="cash_buffer_years"><option value="1">1 Year Buffer</option><option value="2" selected>2 Years Buffer</option><option value="3">3 Years Buffer</option></select></div>
+        <div class="input-group"><label>Filing Status</label><select id="filing_status"><option value="MFJ" selected>MFJ</option><option value="Single">Single</option></select></div>
         <div class="input-group">
-            <label>Auto-Conversion Tax Bracket Cap</label>
+            <label>Tax Target Cap</label>
             <select id="target_bracket">
-                <option value="0.10">10% Bracket Room</option>
                 <option value="0.12" selected>12% / 15% Cap</option>
-                <option value="0.22">22% Bracket Room</option>
-                <option value="0.24">24% Bracket Room</option>
+                <option value="0.22">22% Bracket</option>
             </select>
         </div>
-        <div class="input-group"><label>State Income Tax (%)</label><input type="number" id="state_tax_rate" step="0.1" value="4.0"></div>
-        <div class="input-group"><label>Pre-Retire Annual Savings ($)</label><input type="number" id="annual_savings_contribution" value="15000"></div>
+        <div class="input-group"><label>State Tax (%)</label><input type="number" id="state_tax_rate" step="0.1" value="4.0"></div>
+        <div class="input-group"><label>Pre-Retire Savings ($)</label><input type="number" id="annual_savings_contribution" value="15000"></div>
         <div class="input-group">
-            <label>Simulation Run Mode</label>
+            <label>Simulation Mode</label>
             <select id="simulation_mode">
-                <option value="Deterministic" selected>Deterministic (Single Scenario Plan)</option>
-                <option value="MonteCarlo">Monte Carlo (250 Randomized Variance Paths)</option>
+                <option value="Deterministic" selected>Deterministic (Single)</option>
+                <option value="MonteCarlo">Monte Carlo (250 Paths)</option>
             </select>
         </div>
     </div>
 
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
         <div>
-            <h3>Level 1 Ordinary Inflow Floors</h3>
+            <h3>Ordinary Inflow Floors</h3>
             <table id="income-floor-table">
-                <thead><tr><th>Description</th><th>Start</th><th>End</th><th>Amount Today</th><th>Action</th></tr></thead>
+                <thead><tr><th>Description</th><th>Start</th><th>End</th><th>Amount Today</th><th style="width:20px;">X</th></tr></thead>
                 <tbody id="income-floor-body">
                     <tr>
-                        <td><input type="text" class="floor-name" value="Social Security"></td>
+                        <td class="txt-left"><input type="text" class="floor-name" value="Social Security"></td>
                         <td><input type="number" class="floor-start" value="67"></td>
                         <td><input type="number" class="floor-end" value="100"></td>
                         <td><input type="number" class="floor-amount" value="42000"></td>
@@ -82,31 +80,31 @@
                     </tr>
                 </tbody>
             </table>
-            <button class="btn btn-secondary" style="margin-top:5px; padding:3px 8px; font-size:0.75rem;" onclick="addFloorRow()">+ Add Row</button>
+            <button class="btn" style="margin-top:2px; padding:2px 5px; font-size:0.65rem; background:#64748b;" onclick="addFloorRow()">+ Inflow Floor</button>
         </div>
         <div>
-            <h3>Level 3 Mandatory Outlays & Custom Conversions</h3>
+            <h3>Outlays & Conversions</h3>
             <table id="outlays-table">
-                <thead><tr><th>Type</th><th>Age</th><th>Amount ($ Value)</th><th>Action</th></tr></thead>
+                <thead><tr><th>Type</th><th>Age</th><th>Amount ($)</th><th style="width:20px;">X</th></tr></thead>
                 <tbody id="outlays-body">
                     <tr>
-                        <td><select class="outlay-type"><option value="Outlay">Capital Outlay Shock</option><option value="Conversion">Forced Roth Conv Event</option></select></td>
+                        <td><select class="outlay-type"><option value="Outlay">Outlay Shock</option><option value="Conversion">Roth Conv Event</option></select></td>
                         <td><input type="number" class="outlay-age" value="68"></td>
                         <td><input type="number" class="outlay-amount" value="45000"></td>
                         <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
                     </tr>
                 </tbody>
             </table>
-            <button class="btn btn-secondary" style="margin-top:5px; padding:3px 8px; font-size:0.75rem;" onclick="addOutlayRow()">+ Add Row</button>
+            <button class="btn" style="margin-top:2px; padding:2px 5px; font-size:0.65rem; background:#64748b;" onclick="addOutlayRow()">+ Special Event</button>
         </div>
     </div>
 
     <h3>Asset Wrappers Matrix Layout</h3>
     <table id="accounts-table">
-        <thead><tr><th>Identifier Wrapper Name</th><th>Tax Class Category</th><th>Current Balance</th><th>Cost Basis ($)</th><th>Target Compounding (Mean)</th><th>Action</th></tr></thead>
+        <thead><tr><th>Identifier Wrapper Name</th><th>Tax Class Category</th><th>Current Balance</th><th>Cost Basis ($)</th><th>Mean Growth</th><th style="width:20px;">X</th></tr></thead>
         <tbody id="accounts-body">
             <tr>
-                <td><input type="text" class="acc-name" value="Pre-Tax Trad IRA/401k"></td>
+                <td class="txt-left"><input type="text" class="acc-name" value="Pre-Tax Trad IRA/401k"></td>
                 <td><select class="acc-type"><option value="Traditional" selected>Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash">Cash/HYSA</option></select></td>
                 <td><input type="number" class="acc-balance" value="1100000"></td>
                 <td><input type="number" class="acc-basis" value="0"></td>
@@ -114,7 +112,7 @@
                 <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
             </tr>
             <tr>
-                <td><input type="text" class="acc-name" value="Taxable Mutual Funds Account"></td>
+                <td class="txt-left"><input type="text" class="acc-name" value="Taxable Mutual Funds Account"></td>
                 <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash/HYSA</option></select></td>
                 <td><input type="number" class="acc-balance" value="350000"></td>
                 <td><input type="number" class="acc-basis" value="220000"></td>
@@ -122,7 +120,7 @@
                 <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
             </tr>
             <tr>
-                <td><input type="text" class="acc-name" value="Roth IRA Storage"></td>
+                <td class="txt-left"><input type="text" class="acc-name" value="Roth IRA Storage"></td>
                 <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth" selected>Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash">Cash/HYSA</option></select></td>
                 <td><input type="number" class="acc-balance" value="150000"></td>
                 <td><input type="number" class="acc-basis" value="150000"></td>
@@ -131,53 +129,49 @@
             </tr>
         </tbody>
     </table>
-    <button class="btn btn-secondary" style="margin-top:5px; padding:3px 8px; font-size:0.75rem;" onclick="addAccountRow()">+ Add Asset Wrapper</button>
+    <button class="btn" style="margin-top:2px; padding:2px 5px; font-size:0.65rem; background:#64748b;" onclick="addAccountRow()">+ Asset Wrapper</button>
 
-    <div style="margin-top:12px;">
-        <button class="btn" style="width:100%; padding:10px; font-size:0.95rem; background:#16a34a;" onclick="triggerEngine()">⚡ Execute Simulation & Tax Optimization Grid</button>
+    <div style="margin-top:6px;">
+        <button class="btn" style="width:100%; padding:6px; font-size:0.85rem; background:#16a34a;" onclick="triggerEngine()">⚡ Execute Simulation & Tax Optimization Grid</button>
     </div>
 
     <div id="chart-wrapper"><canvas id="canvasChart"></canvas></div>
 
-    <h3 id="table-header-title">Granular Liquidation Audit & Account Ledger Projections</h3>
-    <div style="width: 100%; overflow-x: auto;">
-        <table style="min-width: 1200px;">
-            <thead>
-                <tr>
-                    <th colspan="2">Timeline</th>
-                    <th colspan="2" class="section-demand">Requirements</th>
-                    <th colspan="4" class="section-sources">Funding Sources</th>
-                    <th colspan="4" class="section-balances">Year-End Wrappers (Net-Growth)</th>
-                    <th colspan="5" class="section-metrics">Tax, Conversion & Surcharge Verification Ledger</th>
-                </tr>
-                <tr>
-                    <th>Yr</th><th>Age</th>
-                    <th class="section-demand">Gross Demand</th><th class="section-demand">Net Deficit</th>
-                    <th class="section-sources">Floor + RMD</th><th class="section-sources">From Cash</th><th class="section-sources">From Brokerage</th><th class="section-sources">From Pre/Post Portfolio</th>
-                    <th class="section-balances">Cash/HYSA</th><th class="section-balances">Brokerage</th><th class="section-balances">Pre-Tax Trad</th><th class="section-balances">Post-Tax Roth</th>
-                    <th class="section-metrics">RMD Req.</th><th class="section-metrics">Roth Conv.</th><th class="section-metrics">Calculated AGI</th><th class="section-metrics">IRMAA Status</th><th class="section-metrics">Total Taxes Paid</th>
-                </tr>
-            </thead>
-            <tbody id="results-body">
-                <tr><td colspan="17" style="text-align:center; color:#64748b;">Click execute above to run the dual-mode matrix processing engine.</td></tr>
-            </tbody>
-        </table>
-    </div>
+    <h3 id="table-header-title">Granular Liquidation Audit & Account Ledger Projections (All columns in $K)</h3>
+    <table style="width:100%;">
+        <thead>
+            <tr>
+                <th colspan="2">Timeline</th>
+                <th colspan="2" class="section-demand">Needs ($K)</th>
+                <th colspan="4" class="section-sources">Funding Draws ($K)</th>
+                <th colspan="4" class="section-balances">Year-End Wrappers ($K)</th>
+                <th colspan="5" class="section-metrics">Tax Optimization Metrics & Surcharges</th>
+            </tr>
+            <tr>
+                <th>Yr</th><th>Age</th>
+                <th class="section-demand">Gross</th><th class="section-demand">Deficit</th>
+                <th class="section-sources">Floor+RMD</th><th class="section-sources">Cash</th><th class="section-sources">Brok</th><th class="section-sources">Pre/Roth</th>
+                <th class="section-balances">Cash</th><th class="section-balances">Brok</th><th class="section-balances">PreTax</th><th class="section-balances">Roth</th>
+                <th class="section-metrics">RMD</th><th class="section-metrics">Conv.</th><th class="section-metrics">AGI</th><th class="section-metrics">Eff Tax %</th><th class="section-metrics">IRMAA</th>
+            </tr>
+        </thead>
+        <tbody id="results-body">
+            <tr><td colspan="17" style="text-align:center; color:#64748b; padding:10px;">Execute parameters to compile ledger.</td></tr>
+        </tbody>
+    </table>
 </div>
 
 <script type="py">
 import json
 import random
-import math
 from pyscript import document, window
 
-# 2026 Inflation Indexed Standard Deductions and Ordinary Margins
 TAX_BRACKETS = {
     'Single': [(12400, 0.10), (50400, 0.12), (105700, 0.22), (201775, 0.24), (256225, 0.32), (640600, 0.35), (float('inf'), 0.37)],
     'MFJ': [(24800, 0.10), (100800, 0.12), (211400, 0.22), (403550, 0.24), (512450, 0.32), (768700, 0.35), (float('inf'), 0.37)]
 }
 STANDARD_DEDUCTION = {'Single': 16100, 'MFJ': 32200}
-IRMAA_THRESHOLDS = {'Single': [109000, 137000, 171000, 205000, 500000], 'MFJ': [218000, 274000, 342000, 410000, 750000]}
+IRMAA_THRESHOLDS = {'Single': [109000, 137000, 171000, 205000], 'MFJ': [218000, 274000, 342000, 410000]}
 
 def safe_float(element_id, default=0.0):
     val = document.getElementById(element_id).value.strip()
@@ -206,13 +200,13 @@ def execute_simulation_matrix():
         ret_age = safe_int('retirement_age', 66)
         inflation = safe_float('inflation_rate', 0.03)
         spending_base = safe_float('annual_spending', 95000)
+        buffer_years = safe_int('cash_buffer_years', 2)
         filing_status = document.getElementById('filing_status').value
         target_bracket_rate = float(document.getElementById('target_bracket').value)
         state_tax_rate = safe_float('state_tax_rate', 4.0) / 100.0
         pre_retire_savings = safe_float('annual_savings_contribution', 15000)
         run_mode = document.getElementById('simulation_mode').value
 
-        # Extract structural array components
         f_names = [i.value for i in document.querySelectorAll('.floor-name')]
         f_starts = [int(i.value or 0) for i in document.querySelectorAll('.floor-start')]
         f_ends = [int(i.value or 100) for i in document.querySelectorAll('.floor-end')]
@@ -228,7 +222,6 @@ def execute_simulation_matrix():
         a_bases = [float(i.value or 0) for i in document.querySelectorAll('.acc-basis')]
         a_returns = [float(i.value or 0) for i in document.querySelectorAll('.acc-return')]
 
-        # Precalculate caps
         max_income_allowed = STANDARD_DEDUCTION[filing_status]
         for limit, rate in TAX_BRACKETS[filing_status]:
             if abs(rate - target_bracket_rate) < 0.001:
@@ -238,34 +231,25 @@ def execute_simulation_matrix():
         iterations = 250 if run_mode == "MonteCarlo" else 1
         mc_trajectories = []
         deterministic_outputs = []
-        
-        # Operational loop processor
+        historical_agi = {}
+
         for run in range(iterations):
-            # Deep copy initial structure profiles
             accounts = []
             for idx in range(len(a_names)):
                 accounts.append({'name': a_names[idx], 'type': a_types[idx], 'balance': a_balances[idx], 'basis': a_bases[idx], 'rate': a_returns[idx]})
             
             run_labels = []
             run_networth = []
-            historical_agi = {}
 
             for yr in range(1, 41):
                 age = cur_age + yr - 1
-                
-                # Market variance sequence of returns implementation (SRR)
-                market_multiplier = 1.0
-                if run_mode == "MonteCarlo":
-                    # Simulating a typical market standard deviation variance of 12%
-                    market_multiplier = random.gauss(1.0, 0.12)
+                market_multiplier = random.gauss(1.0, 0.12) if run_mode == "MonteCarlo" else 1.0
 
-                # Pre-retirement workspace savings capture
                 if age < ret_age:
                     contrib = pre_retire_savings * ((1 + inflation) ** (yr - 1))
                     for acc in accounts:
                         if acc['type'] == 'Traditional': acc['balance'] += contrib; break
 
-                # Outlays vs spending needs calculations
                 base_need = spending_base * ((1 + inflation) ** (yr - 1)) if age >= ret_age else 0.0
                 shock_need = 0.0
                 manual_conversion_demand = 0.0
@@ -278,13 +262,11 @@ def execute_simulation_matrix():
 
                 realized_cash_demand = base_need + shock_need
                 
-                # Non-controllable revenue floors
                 current_year_floor = 0.0
                 for i in range(len(f_names)):
                     if f_starts[i] <= age <= f_ends[i]:
                         current_year_floor += f_amounts[i] * ((1 + inflation) ** (yr - 1))
 
-                # Handle mandatory internal RMD rules
                 trad_total = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
                 rmd_div = (27.4 - (age - 73)) if age >= 73 else 0
                 rmd_req = (trad_total / rmd_div) if rmd_div > 0 else 0.0
@@ -293,14 +275,30 @@ def execute_simulation_matrix():
                 ordinary_income_flow = current_year_floor + rmd_req
                 capital_gains_realized = 0.0
 
-                # Liquidate internally generated pre-tax mandatory distributions
+                # Liquidate standard internal mandatory RMDs
                 rem_rmd = rmd_req
                 for acc in accounts:
                     if acc['type'] == 'Traditional' and acc['balance'] > 0:
                         w = min(rem_rmd, acc['balance'])
                         acc['balance'] -= w; rem_rmd -= w
 
-                # Compute core withdrawal gaps
+                # Liquidate / Rebalance targeted Cash Buffer rules
+                target_cash_reserve = base_need * buffer_years if age >= ret_age else 0.0
+                current_cash_pool = sum(a['balance'] for a in accounts if a['type'] == 'Cash')
+                
+                if age >= ret_age and current_cash_pool < target_cash_reserve:
+                    cash_deficit = target_cash_reserve - current_cash_pool
+                    for acc in accounts:
+                        if acc['type'] == 'Brokerage' and acc['balance'] > 0:
+                            harvest = min(cash_deficit, acc['balance'])
+                            g_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
+                            capital_gains_realized += harvest * g_ratio
+                            acc['basis'] -= (harvest * (1.0 - g_ratio))
+                            acc['balance'] -= harvest
+                            cash_deficit -= harvest
+                            for c_acc in accounts:
+                                if c_acc['type'] == 'Cash': c_acc['balance'] += harvest; break
+
                 net_deficit = max(0.0, realized_cash_demand - base_revenue_flow)
                 rem_cash_needed = net_deficit
 
@@ -308,8 +306,7 @@ def execute_simulation_matrix():
                 sourced_brokerage = 0.0
                 sourced_portfolio = 0.0
 
-                # Level 2 Pro-rata asset drawdown processing
-                for c_type in ['Cash', 'Brokerage']:
+                for c_type in ['Cash', 'Brokerage', 'Traditional', 'Roth']:
                     if rem_cash_needed <= 0: break
                     for acc in accounts:
                         if acc['type'] == c_type and acc['balance'] > 0:
@@ -320,47 +317,36 @@ def execute_simulation_matrix():
                                 capital_gains_realized += pull * g_ratio
                                 sourced_brokerage += pull
                                 acc['basis'] -= (pull * (1.0 - g_ratio))
+                            else:
+                                if acc['type'] == 'Traditional': ordinary_income_flow += pull
+                                sourced_portfolio += pull
                             acc['balance'] -= pull; rem_cash_needed -= pull
 
-                # Portfolio conversions and deep tax extraction rules
-                for c_type in ['Traditional', 'Roth']:
-                    if rem_cash_needed <= 0: break
-                    for acc in accounts:
-                        if acc['type'] == c_type and acc['balance'] > 0:
-                            pull = min(rem_cash_needed, acc['balance'])
-                            if acc['type'] == 'Traditional': ordinary_income_flow += pull
-                            sourced_portfolio += pull
-                            acc['balance'] -= pull; rem_cash_needed -= pull
-
-                # Custom & Tax bracket maximization automated logic loop
+                # Automated Bracket Maximization Room Checks
                 total_conv_made = 0.0
                 current_trad_bal = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
-                
                 combined_conversion_target = manual_conversion_demand + max(0.0, max_income_allowed - ordinary_income_flow)
                 if combined_conversion_target > 0 and current_trad_bal > 0:
                     exec_conv = min(combined_conversion_target, current_trad_bal)
                     ordinary_income_flow += exec_conv
                     total_conv_made += exec_conv
-                    
                     temp_rem = exec_conv
                     for acc in accounts:
                         if acc['type'] == 'Traditional' and acc['balance'] > 0:
                             amt = min(temp_rem, acc['balance'])
                             acc['balance'] -= amt; temp_rem -= amt
-                    
                     for acc in accounts:
                         if acc['type'] == 'Roth': acc['balance'] += exec_conv; break
 
-                # Modern AGI compilation mechanics
                 calculated_agi = ordinary_income_flow + capital_gains_realized
                 historical_agi[age] = calculated_agi
 
-                # Calculate modern tax profiles
                 fed_tax = calculate_progressive_tax(ordinary_income_flow, filing_status) + (capital_gains_realized * 0.15)
                 state_tax = calculated_agi * state_tax_rate
                 total_tax = fed_tax + state_tax
+                effective_tax_rate = (total_tax / calculated_agi * 100) if calculated_agi > 0 else 0.0
 
-                # Process tax extraction payments across wrappers
+                # Pay Taxes out of Cash/Brokerage
                 rem_tax = total_tax
                 for wrap in ['Cash', 'Brokerage', 'Roth']:
                     if rem_tax <= 0: break
@@ -369,15 +355,13 @@ def execute_simulation_matrix():
                             p = min(rem_tax, acc['balance'])
                             acc['balance'] -= p; rem_tax -= p
 
-                # Year-end performance asset growth calculation execution
+                # Compute Year-End Growth Yields
                 for acc in accounts:
                     if acc['balance'] > 0:
-                        actual_yield = acc['rate'] * market_multiplier
-                        growth = acc['balance'] * actual_yield
+                        growth = acc['balance'] * (acc['rate'] * market_multiplier)
                         acc['balance'] += growth
                         if acc['type'] in ['Brokerage', 'Cash']: acc['basis'] += growth * 0.3
 
-                # Snapshot reporting properties
                 end_c = sum(a['balance'] for a in accounts if a['type'] == 'Cash')
                 end_b = sum(a['balance'] for a in accounts if a['type'] == 'Brokerage')
                 end_t = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
@@ -387,81 +371,64 @@ def execute_simulation_matrix():
                 run_labels.append(f"Age {age}")
                 run_networth.append(current_networth)
 
-                # Modern 2026 Medicare IRMAA Surcharge check matrix logic
-                lookback_age = age - 2
-                lookback_val = historical_agi.get(lookback_age, 0.0)
+                lookback_val = historical_agi.get(age - 2, 0.0)
                 irmaa_status = "Safe"
-                t_limits = IRMAA_THRESHOLDS[filing_status]
-                if age >= 65:
-                    if lookback_val > t_limits[0]: irmaa_status = "⚠️ Tier 1 Surcharge"
-                    if lookback_val > t_limits[1]: irmaa_status = "🚨 Tier 2 Warning"
-                    if lookback_val > t_limits[3]: irmaa_status = "🛑 Critical Surcharge"
+                if age >= 65 and lookback_val > IRMAA_THRESHOLDS[filing_status][0]: irmaa_status = "⚠️ IRMAA"
 
                 if run == 0:
                     deterministic_outputs.append(f"""
                         <tr>
                             <td>{yr}</td><td>{age}</td>
-                            <td class='section-demand'>${realized_cash_demand:,.0f}</td>
-                            <td class='section-demand' style='color:#0284c7;'>${net_deficit:,.0f}</td>
-                            <td class='section-sources'>${base_revenue_flow:,.0f}</td>
-                            <td class='section-sources'>${sourced_cash:,.0f}</td>
-                            <td class='section-sources'>${sourced_brokerage:,.0f}</td>
-                            <td class='section-sources'>${sourced_portfolio:,.0f}</td>
-                            <td class='section-balances'>${end_c:,.0f}</td>
-                            <td class='section-balances'>${end_b:,.0f}</td>
-                            <td class='section-balances' style='color:#b45309;'>${end_t:,.0f}</td>
-                            <td class='section-balances' style='color:#16a34a;'>${end_r:,.0f}</td>
-                            <td class='section-metrics'>${rmd_req:,.0f}</td>
-                            <td class='section-metrics' style='color:#2563eb;'>${total_conv_made:,.0f}</td>
-                            <td class='section-metrics'>${calculated_agi:,.0f}</td>
-                            <td class='section-metrics' style='font-weight:600;'>{irmaa_status}</td>
-                            <td style='color:#dc2626;'>${total_tax:,.0f}</td>
+                            <td class='section-demand'>${realized_cash_demand/1000:,.1f}k</td>
+                            <td class='section-demand' style='color:#0284c7;'>${net_deficit/1000:,.1f}k</td>
+                            <td class='section-sources'>${base_revenue_flow/1000:,.1f}k</td>
+                            <td class='section-sources'>${sourced_cash/1000:,.1f}k</td>
+                            <td class='section-sources'>${sourced_brokerage/1000:,.1f}k</td>
+                            <td class='section-sources'>${sourced_portfolio/1000:,.1f}k</td>
+                            <td class='section-balances'>${end_c/1000:,.1f}k</td>
+                            <td class='section-balances'>${end_b/1000:,.1f}k</td>
+                            <td class='section-balances' style='color:#b45309;'>${end_t/1000:,.1f}k</td>
+                            <td class='section-balances' style='color:#16a34a;'>${end_r/1000:,.1f}k</td>
+                            <td class='section-metrics'>${rmd_req/1000:,.1f}k</td>
+                            <td class='section-metrics' style='color:#2563eb;'>${total_conv_made/1000:,.1f}k</td>
+                            <td class='section-metrics'>${calculated_agi/1000:,.1f}k</td>
+                            <td class='section-metrics' style='font-weight:600; color:#dc2626;'>{effective_tax_rate:.1f}%</td>
+                            <td class='section-metrics'>{irmaa_status}</td>
                         </tr>
                     """)
 
             mc_trajectories.append(run_networth)
 
-        # Finish layout reporting matrix display operations
         if run_mode == "Deterministic":
-            document.getElementById('table-header-title').innerText = "Granular Liquidation Audit & Account Ledger Projections (Single Target Tracking)"
+            document.getElementById('table-header-title').innerText = "Granular Liquidation Audit & Account Ledger Projections ($K Scale View)"
             document.getElementById('results-body').innerHTML = "".join(deterministic_outputs)
-            window.renderChart(json.dumps(run_labels), json.dumps(mc_trajectories[0]), "Single Plan Net Worth Strategy")
+            window.renderChart(json.dumps(run_labels), json.dumps(mc_trajectories[0]), "Deterministic Net Worth Plan ($)")
         else:
-            # Process Monte Carlo probability boundaries profiles
-            document.getElementById('table-header-title').innerText = "Monte Carlo Aggregated Probability Bounds Ledger (250 Variant Multi-Paths)"
+            document.getElementById('table-header-title').innerText = "Monte Carlo Aggregated Probability Bounds Ledger ($K Scale View)"
             mc_labels = [f"Age {cur_age + y}" for y in range(40)]
-            
             p50_median_path = []
-            for y in range(40):
-                sorted_year_stack = sorted([mc_trajectories[r][y] for r in range(iterations)])
-                p50_median_path.append(sorted_year_stack[int(iterations * 0.5)])
-
-            # Convert table view to summarize safety metrics instead
             mc_summary_rows = []
             for y in range(40):
-                age_lbl = cur_age + y
                 sorted_year_stack = sorted([mc_trajectories[r][y] for r in range(iterations)])
                 p10 = sorted_year_stack[int(iterations * 0.1)]
                 p50 = sorted_year_stack[int(iterations * 0.5)]
                 p90 = sorted_year_stack[int(iterations * 0.9)]
+                p50_median_path.append(p50)
                 
-                survival_count = sum(1 for r in range(iterations) if mc_trajectories[r][y] > 10000)
-                prob_rate = (survival_count / iterations) * 100.0
-
+                prob_rate = (sum(1 for r in range(iterations) if mc_trajectories[r][y] > 10000) / iterations) * 100.0
                 mc_summary_rows.append(f"""
                     <tr>
-                        <td>{y+1}</td><td>{age_lbl}</td>
-                        <td colspan='2' style='text-align:center;' class='section-demand'>Monte Carlo Confidence Summary Mode</td>
-                        <td colspan='4' style='text-align:center;' class='section-sources'>Statistical Distribution Array Profiles</td>
-                        <td class='section-balances' style='color:#dc2626;'>P10 (Worst Case): ${p10:,.0f}</td>
-                        <td class='section-balances' style='color:#2563eb; font-weight:bold;'>P50 (Median Plan): ${p50:,.0f}</td>
-                        <td class='section-balances' style='color:#16a34a;'>P90 (Best Case): ${p90:,.0f}</td>
-                        <td colspan='5' class='section-metrics' style='font-weight:bold; color:#0d9488;'>Simulated Portfolio Survival Success Probability: {prob_rate:.1f}%</td>
-                        <td>N/A</td>
+                        <td>{y+1}</td><td>{cur_age + y}</td>
+                        <td colspan="2" class="section-demand">Monte Carlo Summary</td>
+                        <td colspan="4" class="section-sources">Distribution Runs Active</td>
+                        <td class="section-balances" style="color:#dc2626;">P10: ${p10/1000:,.1f}k</td>
+                        <td class="section-balances" style="color:#2563eb; font-weight:bold;">P50: ${p50/1000:,.1f}k</td>
+                        <td class="section-balances" style="color:#16a34a;">P90: ${p90/1000:,.1f}k</td>
+                        <td colspan="5" class="section-metrics" style="font-weight:bold; color:#0d9488;">Success Odds: {prob_rate:.1f}%</td>
                     </tr>
                 """)
             document.getElementById('results-body').innerHTML = "".join(mc_summary_rows)
-            window.renderChart(json.dumps(mc_labels), json.dumps(p50_median_path), "Monte Carlo Median P50 Wealth Path")
+            window.renderChart(json.dumps(mc_labels), json.dumps(p50_median_path), "Monte Carlo Median P50 Wealth Path ($)")
 
     except Exception as e:
         window.alert(f"Matrix Processing Engine Exception Error: {str(e)}")
@@ -471,13 +438,13 @@ window.execute_simulation_matrix = execute_simulation_matrix
 
 <script>
 function addFloorRow() {
-    document.getElementById('income-floor-body').insertAdjacentHTML('beforeend', `<tr><td><input type="text" class="floor-name" value="Annuity / Inflow"></td><td><input type="number" class="floor-start" value="65"></td><td><input type="number" class="floor-end" value="95"></td><td><input type="number" class="floor-amount" value="12000"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
+    document.getElementById('income-floor-body').insertAdjacentHTML('beforeend', `<tr><td class="txt-left"><input type="text" class="floor-name" value="Annuity / Inflow"></td><td><input type="number" class="floor-start" value="65"></td><td><input type="number" class="floor-end" value="95"></td><td><input type="number" class="floor-amount" value="12000"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
 }
 function addOutlayRow() {
-    document.getElementById('outlays-body').insertAdjacentHTML('beforeend', `<tr><td><select class="outlay-type"><option value="Outlay">Capital Outlay Shock</option><option value="Conversion">Forced Roth Conv Event</option></select></td><td><input type="number" class="outlay-age" value="70"></td><td><input type="number" class="outlay-amount" value="25000"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
+    document.getElementById('outlays-body').insertAdjacentHTML('beforeend', `<tr><td><select class="outlay-type"><option value="Outlay">Outlay Shock</option><option value="Conversion">Roth Conv Event</option></select></td><td><input type="number" class="outlay-age" value="70"></td><td><input type="number" class="outlay-amount" value="25000"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
 }
 function addAccountRow() {
-    document.getElementById('accounts-body').insertAdjacentHTML('beforeend', `<tr><td><input type="text" class="acc-name" value="New Asset Port"></td><td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash/HYSA</option></select></td><td><input type="number" class="acc-balance" value="100000"></td><td><input type="number" class="acc-basis" value="100000"></td><td><input type="number" class="acc-return" step="0.01" value="0.06"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
+    document.getElementById('accounts-body').insertAdjacentHTML('beforeend', `<tr><td class="txt-left"><input type="text" class="acc-name" value="New Asset Port"></td><td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash/HYSA</option></select></td><td><input type="number" class="acc-balance" value="100000"></td><td><input type="number" class="acc-basis" value="100000"></td><td><input type="number" class="acc-return" step="0.01" value="0.06"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
 }
 
 let activeChartInstance = null;
@@ -494,9 +461,7 @@ window.renderChart = function(labelsJson, dataJson, titleLabel) {
     });
 }
 
-function triggerEngine() {
-    if (window.execute_simulation_matrix) { window.execute_simulation_matrix(); }
-}
+function triggerEngine() { if (window.execute_simulation_matrix) { window.execute_simulation_matrix(); } }
 
 function getInputsSnapshot() {
     const collectValues = selector => Array.from(document.querySelectorAll(selector)).map(i => i.value);
@@ -504,9 +469,9 @@ function getInputsSnapshot() {
         global: {
             current_age: document.getElementById('current_age').value, retirement_age: document.getElementById('retirement_age').value,
             inflation_rate: document.getElementById('inflation_rate').value, annual_spending: document.getElementById('annual_spending').value,
-            filing_status: document.getElementById('filing_status').value, target_bracket: document.getElementById('target_bracket').value,
-            state_tax_rate: document.getElementById('state_tax_rate').value, annual_savings_contribution: document.getElementById('annual_savings_contribution').value,
-            simulation_mode: document.getElementById('simulation_mode').value
+            cash_buffer_years: document.getElementById('cash_buffer_years').value, filing_status: document.getElementById('filing_status').value, 
+            target_bracket: document.getElementById('target_bracket').value, state_tax_rate: document.getElementById('state_tax_rate').value, 
+            annual_savings_contribution: document.getElementById('annual_savings_contribution').value, simulation_mode: document.getElementById('simulation_mode').value
         },
         floors: collectValues('.floor-name').map((_, i) => ({ name: collectValues('.floor-name')[i], start: collectValues('.floor-start')[i], end: collectValues('.floor-end')[i], amount: collectValues('.floor-amount')[i] })),
         outlays: collectValues('.outlay-age').map((_, i) => ({ type: collectValues('.outlay-type')[i], age: collectValues('.outlay-age')[i], amount: collectValues('.outlay-amount')[i] })),
@@ -514,24 +479,16 @@ function getInputsSnapshot() {
     };
 }
 
-function saveToBrowserStorage() {
-    localStorage.setItem('retirement_engine_v10', JSON.stringify(getInputsSnapshot()));
-    alert("Configuration parameters locked and captured in browser local engine storage.");
-}
-
+function saveToBrowserStorage() { localStorage.setItem('retirement_engine_v11', JSON.stringify(getInputsSnapshot())); alert("Locked into browser storage."); }
 function loadFromBrowserStorage() {
-    const backup = localStorage.getItem('retirement_engine_v10');
-    if(!backup) return alert("No custom parameters captured in this backup profile workspace context.");
+    const backup = localStorage.getItem('retirement_engine_v11'); if(!backup) return alert("No profile workspace located.");
     const data = JSON.parse(backup);
     Object.keys(data.global).forEach(key => { if(document.getElementById(key)) document.getElementById(key).value = data.global[key]; });
-    const rebuildTable = (bodyId, array, htmlBuilder) => {
-        const target = document.getElementById(bodyId); target.innerHTML = '';
-        array.forEach(item => target.insertAdjacentHTML('beforeend', htmlBuilder(item)));
-    };
-    rebuildTable('income-floor-body', data.floors, f => `<tr><td><input type="text" class="floor-name" value="${f.name}"></td><td><input type="number" class="floor-start" value="${f.start}"></td><td><input type="number" class="floor-end" value="${f.end}"></td><td><input type="number" class="floor-amount" value="${f.amount}"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
-    rebuildTable('outlays-body', data.outlays, o => `<tr><td><select class="outlay-type"><option value="Outlay" ${o.type==='Outlay'?'selected':''}>Capital Outlay Shock</option><option value="Conversion" ${o.type==='Conversion'?'selected':''}>Forced Roth Conv Event</option></select></td><td><input type="number" class="outlay-age" value="${o.age}"></td><td><input type="number" class="outlay-amount" value="${o.amount}"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
-    rebuildTable('accounts-body', data.accounts, a => `<tr><td><input type="text" class="acc-name" value="${a.name}"></td><td><select class="acc-type"><option value="Traditional" ${a.type==='Traditional'?'selected':''}>Traditional (Pre-Tax)</option><option value="Roth" ${a.type==='Roth'?'selected':''}>Roth</option><option value="Brokerage" ${a.type==='Brokerage'?'selected':''}>Taxable Brokerage</option><option value="Cash" ${a.type==='Cash'?'selected':''}>Cash/HYSA</option></select></td><td><input type="number" class="acc-balance" value="${a.balance}"></td><td><input type="number" class="acc-basis" value="${a.basis}"></td><td><input type="number" class="acc-return" step="0.01" value="${a.rate}"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
-    alert("Variables successfully reloaded into operational memory panels.");
+    const rebuildTable = (bodyId, array, htmlBuilder) => { const target = document.getElementById(bodyId); target.innerHTML = ''; array.forEach(item => target.insertAdjacentHTML('beforeend', htmlBuilder(item))); };
+    rebuildTable('income-floor-body', data.floors, f => `<tr><td class="txt-left"><input type="text" class="floor-name" value="${f.name}"></td><td><input type="number" class="floor-start" value="${f.start}"></td><td><input type="number" class="floor-end" value="${f.end}"></td><td><input type="number" class="floor-amount" value="${f.amount}"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
+    rebuildTable('outlays-body', data.outlays, o => `<tr><td><select class="outlay-type"><option value="Outlay" ${o.type==='Outlay'?'selected':''}>Outlay Shock</option><option value="Conversion" ${o.type==='Conversion'?'selected':''}>Roth Conv Event</option></select></td><td><input type="number" class="outlay-age" value="${o.age}"></td><td><input type="number" class="outlay-amount" value="${o.amount}"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
+    rebuildTable('accounts-body', data.accounts, a => `<tr><td class="txt-left"><input type="text" class="acc-name" value="${a.name}"></td><td><select class="acc-type"><option value="Traditional" ${a.type==='Traditional'?'selected':''}>Traditional</option><option value="Roth" ${a.type==='Roth'?'selected':''}>Roth</option><option value="Brokerage" ${a.type==='Brokerage'?'selected':''}>Taxable Brokerage</option><option value="Cash" ${a.type==='Cash'?'selected':''}>Cash/HYSA</option></select></td><td><input type="number" class="acc-balance" value="${a.balance}"></td><td><input type="number" class="acc-basis" value="${a.basis}"></td><td><input type="number" class="acc-return" step="0.01" value="${a.rate}"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
+    alert("Variables reloaded.");
 }
 </script>
 </body>
