@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retirement Engine v13 - Statutory Tax Shift Matrix</title>
+    <title>Retirement Engine v14 - Stacked Asset Allocation Matrix</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2026.3.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -19,12 +19,12 @@
         th { background-color: #e2e8f0; color: #0f172a; font-weight: 700; text-align: center; }
         .btn { background: #2563eb; color: white; border: none; padding: 3px 6px; font-weight: bold; cursor: pointer; border-radius: 3px; font-size: 0.72rem; }
         .btn:hover { background: #1d4ed8; }
-        #chart-wrapper { width: 100%; height: 140px; margin: 6px 0; background: #fafafa; border: 1px solid #cbd5e1; border-radius: 3px; }
+        #chart-wrapper { width: 100%; height: 180px; margin: 6px 0; background: #fafafa; border: 1px solid #cbd5e1; border-radius: 3px; }
         .section-demand { background-color: #f0f9ff; }
         .section-sources { background-color: #fefecb; }
         .section-balances { background-color: #f0fdf4; }
         .section-metrics { background-color: #faf5ff; }
-        .diagnostic-card { background: #fef2f2; border: 1px solid #fca5a5; padding: 6px; border-radius: 4px; margin-bottom: 6px; font-size: 0.75rem; color: #991b1b; }
+        .diagnostic-card { background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; margin-bottom: 6px; font-size: 0.75rem; color: #1e293b; }
         input[type="text"], input[type="number"] { width: 100%; box-sizing: border-box; padding: 1px 3px; font-size: 0.7rem; }
         .txt-left { text-align: left; }
     </style>
@@ -33,15 +33,15 @@
 
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; background: #1e3a8a; color: white; padding: 3px 8px; border-radius: 3px;">
-        <span style="font-weight: bold; font-size: 0.85rem;">Retirement Matrix v13 [Statutory Tax Shift Engine]</span>
+        <span style="font-weight: bold; font-size: 0.85rem;">Retirement Matrix v14 [Stacked Asset Stratification]</span>
         <div style="display: flex; gap: 4px;">
             <button class="btn" style="background:#0ea5e9; padding: 1px 5px;" onclick="saveToBrowserStorage()">💾 Save</button>
             <button class="btn" style="background:#64748b; padding: 1px 5px;" onclick="loadFromBrowserStorage()">📂 Load</button>
         </div>
     </div>
 
-    <div id="optimizer-diagnostic-panel" class="diagnostic-card">
-        📊 Run the matrix simulator to evaluate how sunsetting tax regimes impact your long-term pre-tax RMD withdrawals.
+    <div id="optimizer-diagnostic-panel" class="diagnostic-card" style="margin-top: 4px;">
+        📊 Run the execution macro below to build a stacked chronological layer map of your tax wrappers.
     </div>
 
     <h3>Strategic System Controls</h3>
@@ -70,13 +70,6 @@
         </div>
         <div class="input-group"><label>State Tax (%)</label><input type="number" id="state_tax_rate" step="0.1" value="4.0"></div>
         <div class="input-group"><label>Pre-Retire Savings ($)</label><input type="number" id="annual_savings_contribution" value="15000"></div>
-        <div class="input-group">
-            <label>Simulation Mode</label>
-            <select id="simulation_mode">
-                <option value="Deterministic" selected>Deterministic (Single)</option>
-                <option value="MonteCarlo">Monte Carlo (250 Paths)</option>
-            </select>
-        </div>
     </div>
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
@@ -133,12 +126,20 @@
                 <td><input type="number" class="acc-return" step="0.005" value="0.06"></td>
                 <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
             </tr>
+            <tr>
+                <td class="txt-left"><input type="text" class="acc-name" value="Emergency Cash Mix"></td>
+                <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash" selected>Cash/HYSA</option></select></td>
+                <td><input type="number" class="acc-balance" value="80000"></td>
+                <td><input type="number" class="acc-basis" value="80000"></td>
+                <td><input type="number" class="acc-return" step="0.005" value="0.04"></td>
+                <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
+            </tr>
         </tbody>
     </table>
     <button class="btn" style="margin-top:2px; padding:1px 4px; font-size:0.62rem; background:#64748b;" onclick="addAccountRow()">+ Asset Wrapper</button>
 
     <div style="margin-top:4px;">
-        <button class="btn" style="width:100%; padding:5px; font-size:0.82rem; background:#16a34a;" onclick="triggerEngine()">⚡ Execute Simulation & Tax Optimization Grid</button>
+        <button class="btn" style="width:100%; padding:5px; font-size:0.82rem; background:#16a34a;" onclick="triggerEngine()">⚡ Execute Simulation & Update Stacked Graph</button>
     </div>
 
     <div id="chart-wrapper"><canvas id="canvasChart"></canvas></div>
@@ -169,17 +170,14 @@
 
 <script type="py">
 import json
-import random
 from pyscript import document, window
 
-# Current standard rules indexed dynamically
 BRACKETS_CURRENT = {
     'Single': [(12400, 0.10), (50400, 0.12), (105700, 0.22), (201775, 0.24), (256225, 0.32), (640600, 0.35), (float('inf'), 0.37)],
     'MFJ': [(24800, 0.10), (100800, 0.12), (211400, 0.22), (403550, 0.24), (512450, 0.32), (768700, 0.35), (float('inf'), 0.37)]
 }
 DEDUCTION_CURRENT = {'Single': 16100, 'MFJ': 32200}
 
-# Historic Sunset Reversion structures (Rates shift higher)
 BRACKETS_REVERTED = {
     'Single': [(10000, 0.10), (40000, 0.15), (95000, 0.25), (200000, 0.28), (430000, 0.33), (float('inf'), 0.396)],
     'MFJ': [(20000, 0.10), (80000, 0.15), (160000, 0.25), (250000, 0.28), (450000, 0.33), (float('inf'), 0.396)]
@@ -197,7 +195,6 @@ def safe_int(element_id, default=0):
     return int(val) if val else default
 
 def calculate_dynamic_tax(income, status, force_sunset, current_sim_year):
-    # If policy is set to sunset, apply higher rates from year 2 (representing statutory changes) onward
     use_sunset = force_sunset and (current_sim_year >= 2)
     brackets = BRACKETS_REVERTED[status] if use_sunset else BRACKETS_CURRENT[status]
     deduction = DEDUCTION_REVERTED[status] if use_sunset else DEDUCTION_CURRENT[status]
@@ -216,9 +213,13 @@ def calculate_dynamic_tax(income, status, force_sunset, current_sim_year):
 
 def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset):
     accounts = []
+    # Force add a hidden Roth account option if missing to collect optimized conversions
+    has_roth = any(t == 'Roth' for t in a_types)
     for idx in range(len(a_names)):
         accounts.append({'name': a_names[idx], 'type': a_types[idx], 'balance': a_balances[idx], 'basis': a_bases[idx], 'rate': a_returns[idx]})
-        
+    if not has_roth:
+        accounts.append({'name': 'Automated Conversion Roth', 'type': 'Roth', 'balance': 0.0, 'basis': 0.0, 'rate': 0.065})
+
     historical_agi = {}
     ledger_logs = []
     total_lifetime_taxes = 0.0
@@ -227,13 +228,12 @@ def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spen
         age = cur_age + yr - 1
         use_sunset_this_year = force_sunset and (yr >= 2)
         
-        # Scale up tax conversion targets if older structures trigger higher caps
         brackets = BRACKETS_REVERTED[filing_status] if use_sunset_this_year else BRACKETS_CURRENT[filing_status]
         deduction = DEDUCTION_REVERTED[filing_status] if use_sunset_this_year else DEDUCTION_CURRENT[filing_status]
         
         max_income_allowed = deduction
         for limit, rate in brackets:
-            if abs(rate - target_bracket_rate) < 0.04: # Match closest tax margin block
+            if abs(rate - target_bracket_rate) < 0.04:
                 max_income_allowed += limit
                 break
 
@@ -263,14 +263,14 @@ def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spen
         ordinary_income_flow = current_year_floor + rmd_req
         capital_gains_realized = 0.0
 
-        # RMD Liquidation
+        # RMD Deductions
         rem_rmd = rmd_req
         for acc in accounts:
             if acc['type'] == 'Traditional' and acc['balance'] > 0:
                 w = min(rem_rmd, acc['balance'])
                 acc['balance'] -= w; rem_rmd -= w
 
-        # Maintain Cash Buffer
+        # Cash Buffer Maintenance
         target_cash_reserve = base_need * buffer_years if age >= ret_age else 0.0
         current_cash_pool = sum(a['balance'] for a in accounts if a['type'] == 'Cash')
         
@@ -306,7 +306,7 @@ def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spen
                         sourced_portfolio += pull
                     acc['balance'] -= pull; rem_cash_needed -= pull
 
-        # Roth Conversions Step
+        # Active Optimization Conversion Pass
         total_conv_made = 0.0
         current_trad_bal = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
         combined_conversion_target = manual_conversion_demand + max(0.0, max_income_allowed - ordinary_income_flow)
@@ -376,7 +376,6 @@ def execute_simulation_matrix():
         regime_input = document.getElementById('tax_regime_mode').value
         state_tax_rate = safe_float('state_tax_rate', 4.0) / 100.0
         pre_retire_savings = safe_float('annual_savings_contribution', 15000)
-        run_mode = document.getElementById('simulation_mode').value
 
         force_sunset = (regime_input == "SUNSET")
 
@@ -395,117 +394,66 @@ def execute_simulation_matrix():
         a_bases = [float(i.value or 0) for i in document.querySelectorAll('.acc-basis')]
         a_returns = [float(i.value or 0) for i in document.querySelectorAll('.acc-return')]
 
-        # Run multi-bracket structural audit scan
         brackets_to_test = [0.0, 0.12, 0.22, 0.24]
         optimization_results = {}
-        
         for br in brackets_to_test:
             nw, tx, _ = run_isolated_scenario(br, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset)
             optimization_results[br] = {'networth': nw, 'taxes': tx}
             
         best_bracket = max(optimization_results, key=lambda k: optimization_results[k]['networth'])
-        
-        diag_html = f"<strong>🤖 System Policy Analysis ({regime_input} Environment):</strong><br>"
-        for br, res in optimization_results.items():
-            b_label = f"Fill to {int(br*100)}% Bracket" if br > 0 else "No Conversions"
-            diag_html += f"• {b_label} → Terminal Portfolio Wealth: <strong>${res['networth']/1000:,.1f}k</strong> | Lifetime Taxes: ${res['taxes']/1000:,.1f}k<br>"
-        diag_html += f"🏆 <strong>Mathematical Direct Target:</strong> Under the chosen parameters, maximizing conversions to the <strong>{int(best_bracket*100)}% tax line</strong> minimizes lifetime tax drag."
-        document.getElementById('optimizer-diagnostic-panel').innerHTML = diag_html
-
         chosen_bracket_rate = best_bracket if strategy_input == "AUTO" else float(strategy_input)
 
-        if run_mode == "Deterministic":
-            _, _, active_logs = run_isolated_scenario(chosen_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset)
+        diag_html = f"<strong>🤖 Multi-Regime Strategy Calibration Result:</strong><br>"
+        for br, res in optimization_results.items():
+            b_label = f"Convert to {int(br*100)}% Bracket" if br > 0 else "No Active Conversions"
+            diag_html += f"• {b_label} → Terminal Net Worth: <strong>${res['networth']/1000:,.1f}k</strong> | Lifetime Taxes: ${res['taxes']/1000:,.1f}k<br>"
+        diag_html += f"🏆 <strong>Chart Plotter Strategy Locked:</strong> Rendering stacked structures based on filling the <strong>{int(chosen_bracket_rate*100)}% bracket</strong>."
+        document.getElementById('optimizer-diagnostic-panel').innerHTML = diag_html
+
+        _, _, active_logs = run_isolated_scenario(chosen_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset)
+        
+        deterministic_outputs = []
+        run_labels = []
+        stack_cash, stack_brokerage, stack_pretax, stack_roth = [], [], [], []
+        
+        for row in active_logs:
+            run_labels.append(f"Age {row['age']}")
+            stack_cash.append(row['end_c'])
+            stack_brokerage.append(row['end_b'])
+            stack_pretax.append(row['end_t'])
+            stack_roth.append(row['end_r'])
             
-            deterministic_outputs = []
-            run_labels = []
-            run_networth = []
-            
-            for row in active_logs:
-                run_labels.append(f"Age {row['age']}")
-                run_networth.append(row['networth'])
-                deterministic_outputs.append(f"""
-                    <tr>
-                        <td>{row['yr']}</td><td>{row['age']}</td>
-                        <td class='section-demand'>${row['realized_cash_demand']/1000:,.1f}k</td>
-                        <td class='section-demand' style='color:#0284c7;'>${row['net_deficit']/1000:,.1f}k</td>
-                        <td class='section-sources'>${row['base_revenue_flow']/1000:,.1f}k</td>
-                        <td class='section-sources'>${row['sourced_cash']/1000:,.1f}k</td>
-                        <td class='section-sources'>${row['sourced_brokerage']/1000:,.1f}k</td>
-                        <td class='section-sources'>${row['sourced_portfolio']/1000:,.1f}k</td>
-                        <td class='section-balances'>${row['end_c']/1000:,.1f}k</td>
-                        <td class='section-balances'>${row['end_b']/1000:,.1f}k</td>
-                        <td class='section-balances' style='color:#b45309;'>${row['end_t']/1000:,.1f}k</td>
-                        <td class='section-balances' style='color:#16a34a;'>${row['end_r']/1000:,.1f}k</td>
-                        <td class='section-metrics'>${row['rmd_req']/1000:,.1f}k</td>
-                        <td class='section-metrics' style='color:#2563eb;'>${row['total_conv_made']/1000:,.1f}k</td>
-                        <td class='section-metrics'>${row['calculated_agi']/1000:,.1f}k</td>
-                        <td class='section-metrics' style='font-weight:600; color:#dc2626;'>{row['effective_tax_rate']:.1f}%</td>
-                        <td class='section-metrics'>{row['irmaa_status']}</td>
-                    </tr>
-                """)
-            document.getElementById('table-header-title').innerText = f"Granular Ledger Audit Profile (Strategy Target: {int(chosen_bracket_rate*100)}%)"
-            document.getElementById('results-body').innerHTML = "".join(deterministic_outputs)
-            window.renderChart(json.dumps(run_labels), json.dumps(run_networth), f"Wealth Arc Timeline ({int(chosen_bracket_rate*100)}% Target)")
-        else:
-            # Monte Carlo Variance Block
-            document.getElementById('table-header-title').innerText = "Monte Carlo Probability Matrix Bounds ($K Scale)"
-            mc_trajectories = []
-            iterations = 250
-            for run in range(iterations):
-                accounts = []
-                for idx in range(len(a_names)):
-                    accounts.append({'name': a_names[idx], 'type': a_types[idx], 'balance': a_balances[idx], 'basis': a_bases[idx], 'rate': a_returns[idx]})
-                
-                run_nw_path = []
-                for yr in range(1, 41):
-                    age = cur_age + yr - 1
-                    market_multiplier = random.gauss(1.0, 0.12)
-                    base_need = spending_base * ((1 + inflation) ** (yr - 1) if age >= ret_age else 0.0)
-                    current_year_floor = sum(f_amounts[i] * ((1 + inflation) ** (yr - 1)) for i in range(len(f_names)) if f_starts[i] <= age <= f_ends[i])
-                    
-                    trad_total = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
-                    rmd_div = (27.4 - (age - 73)) if age >= 73 else 0
-                    rmd_req = (trad_total / rmd_div) if rmd_div > 0 else 0.0
-                    
-                    net_deficit = max(0.0, base_need - (current_year_floor + rmd_req))
-                    rem_cash = net_deficit
-                    for c_type in ['Cash', 'Brokerage', 'Traditional', 'Roth']:
-                        if rem_cash <= 0: break
-                        for acc in accounts:
-                            if acc['type'] == c_type and acc['balance'] > 0:
-                                p = min(rem_cash, acc['balance'])
-                                acc['balance'] -= p; rem_cash -= p
-                                
-                    for acc in accounts:
-                        if acc['balance'] > 0:
-                            acc['balance'] *= (1.0 + (acc['rate'] * market_multiplier))
-                    run_nw_path.append(sum(a['balance'] for a in accounts))
-                mc_trajectories.append(run_nw_path)
-                
-            mc_labels = [f"Age {cur_age + y}" for y in range(40)]
-            p50_median_path = []
-            mc_summary_rows = []
-            for y in range(40):
-                sorted_year_stack = sorted([mc_trajectories[r][y] for r in range(iterations)])
-                p10 = sorted_year_stack[int(iterations * 0.1)]
-                p50 = sorted_year_stack[int(iterations * 0.5)]
-                p90 = sorted_year_stack[int(iterations * 0.9)]
-                p50_median_path.append(p50)
-                prob_rate = (sum(1 for r in range(iterations) if mc_trajectories[r][y] > 10000) / iterations) * 100.0
-                mc_summary_rows.append(f"""
-                    <tr>
-                        <td>{y+1}</td><td>{cur_age + y}</td>
-                        <td colspan="2" class="section-demand">Monte Carlo Summary</td>
-                        <td colspan="4" class="section-sources">Runs Evaluated</td>
-                        <td class="section-balances" style="color:#dc2626;">P10: ${p10/1000:,.1f}k</td>
-                        <td class="section-balances" style="color:#2563eb; font-weight:bold;">P50: ${p50/1000:,.1f}k</td>
-                        <td class="section-balances" style="color:#16a34a;">P90: ${p90/1000:,.1f}k</td>
-                        <td colspan="5" class="section-metrics" style="font-weight:bold; color:#0d9488;">Success Odds: {prob_rate:.1f}%</td>
-                    </tr>
-                """)
-            document.getElementById('results-body').innerHTML = "".join(mc_summary_rows)
-            window.renderChart(json.dumps(mc_labels), json.dumps(p50_median_path), f"Monte Carlo Path Bounds ({regime_input})")
+            deterministic_outputs.append(f"""
+                <tr>
+                    <td>{row['yr']}</td><td>{row['age']}</td>
+                    <td class='section-demand'>${row['realized_cash_demand']/1000:,.1f}k</td>
+                    <td class='section-demand' style='color:#0284c7;'>${row['net_deficit']/1000:,.1f}k</td>
+                    <td class='section-sources'>${row['base_revenue_flow']/1000:,.1f}k</td>
+                    <td class='section-sources'>${row['sourced_cash']/1000:,.1f}k</td>
+                    <td class='section-sources'>${row['sourced_brokerage']/1000:,.1f}k</td>
+                    <td class='section-sources'>${row['sourced_portfolio']/1000:,.1f}k</td>
+                    <td class='section-balances'>${row['end_c']/1000:,.1f}k</td>
+                    <td class='section-balances'>${row['end_b']/1000:,.1f}k</td>
+                    <td class='section-balances' style='color:#b45309;'>${row['end_t']/1000:,.1f}k</td>
+                    <td class='section-balances' style='color:#16a34a;'>${row['end_r']/1000:,.1f}k</td>
+                    <td class='section-metrics'>${row['rmd_req']/1000:,.1f}k</td>
+                    <td class='section-metrics' style='color:#2563eb;'>${row['total_conv_made']/1000:,.1f}k</td>
+                    <td class='section-metrics'>${row['calculated_agi']/1000:,.1f}k</td>
+                    <td class='section-metrics' style='font-weight:600; color:#dc2626;'>{row['effective_tax_rate']:.1f}%</td>
+                    <td class='section-metrics'>{row['irmaa_status']}</td>
+                </tr>
+            """)
+        document.getElementById('table-header-title').innerText = f"Granular Ledger Audit Profile (Strategy Target: {int(chosen_bracket_rate*100)}%)"
+        document.getElementById('results-body').innerHTML = "".join(deterministic_outputs)
+        
+        # Package and transmit all four dataset tracks out to the javascript area chart renderer
+        window.renderStackedChart(
+            json.dumps(run_labels), 
+            json.dumps(stack_cash), 
+            json.dumps(stack_brokerage), 
+            json.dumps(stack_pretax), 
+            json.dumps(stack_roth)
+        )
 
     except Exception as e:
         window.alert(f"Matrix Processing Engine Exception Error: {str(e)}")
@@ -525,16 +473,30 @@ function addAccountRow() {
 }
 
 let activeChartInstance = null;
-window.renderChart = function(labelsJson, dataJson, titleLabel) {
+window.renderStackedChart = function(labelsJs, cashJs, brokerageJs, pretaxJs, rothJs) {
     const ctx = document.getElementById('canvasChart').getContext('2d');
     if(activeChartInstance) { activeChartInstance.destroy(); }
+    
     activeChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: JSON.parse(labelsJson),
-            datasets: [{ label: titleLabel, data: JSON.parse(dataJson), borderColor: '#1e3a8a', backgroundColor: 'rgba(30, 58, 138, 0.03)', fill: true, tension: 0.1, pointRadius: 1 }]
+            labels: JSON.parse(labelsJs),
+            datasets: [
+                { label: '🟪 Liquid Cash Buffer', data: JSON.parse(cashJs), borderColor: '#9333ea', backgroundColor: 'rgba(147, 51, 234, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
+                { label: '🟦 Taxable Brokerage', data: JSON.parse(brokerageJs), borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
+                { label: '🟨 Pre-Tax Traditional IRA', data: JSON.parse(pretaxJs), borderColor: '#d97706', backgroundColor: 'rgba(217, 119, 6, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
+                { label: '🟩 Tax-Free Roth Balance', data: JSON.parse(rothJs), borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.6)', fill: true, tension: 0.1, pointRadius: 0 }
+            ]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { boxWidth: 12, font: { size: 9 } } } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { boxWidth: 10, font: { size: 9 } } } },
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true, ticks: { callback: function(value) { return '$' + (value/1000).toFixed(0) + 'k'; } } }
+            }
+        }
     });
 }
 
@@ -548,8 +510,7 @@ function getInputsSnapshot() {
             inflation_rate: document.getElementById('inflation_rate').value, annual_spending: document.getElementById('annual_spending').value,
             cash_buffer_years: document.getElementById('cash_buffer_years').value, filing_status: document.getElementById('filing_status').value, 
             target_bracket: document.getElementById('target_bracket').value, tax_regime_mode: document.getElementById('tax_regime_mode').value,
-            state_tax_rate: document.getElementById('state_tax_rate').value, annual_savings_contribution: document.getElementById('annual_savings_contribution').value, 
-            simulation_mode: document.getElementById('simulation_mode').value
+            state_tax_rate: document.getElementById('state_tax_rate').value, annual_savings_contribution: document.getElementById('annual_savings_contribution').value
         },
         floors: collectValues('.floor-name').map((_, i) => ({ name: collectValues('.floor-name')[i], start: collectValues('.floor-start')[i], end: collectValues('.floor-end')[i], amount: collectValues('.floor-amount')[i] })),
         outlays: collectValues('.outlay-age').map((_, i) => ({ type: collectValues('.outlay-type')[i], age: collectValues('.outlay-age')[i], amount: collectValues('.outlay-amount')[i] })),
@@ -557,9 +518,9 @@ function getInputsSnapshot() {
     };
 }
 
-function saveToBrowserStorage() { localStorage.setItem('retirement_engine_v13', JSON.stringify(getInputsSnapshot())); alert("Locked into browser storage."); }
+function saveToBrowserStorage() { localStorage.setItem('retirement_engine_v14', JSON.stringify(getInputsSnapshot())); alert("Locked into browser storage."); }
 function loadFromBrowserStorage() {
-    const backup = localStorage.getItem('retirement_engine_v13'); if(!backup) return alert("No profile workspace located.");
+    const backup = localStorage.getItem('retirement_engine_v14'); if(!backup) return alert("No profile workspace located.");
     const data = JSON.parse(backup);
     Object.keys(data.global).forEach(key => { if(document.getElementById(key)) document.getElementById(key).value = data.global[key]; });
     const rebuildTable = (bodyId, array, htmlBuilder) => { const target = document.getElementById(bodyId); target.innerHTML = ''; array.forEach(item => target.insertAdjacentHTML('beforeend', htmlBuilder(item))); };
