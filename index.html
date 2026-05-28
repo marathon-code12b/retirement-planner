@@ -150,20 +150,20 @@
             <tr>
                 <th colspan="2">Timeline</th>
                 <th colspan="2" class="section-demand">Needs ($K)</th>
-                <th colspan="4" class="section-sources">Funding Draws ($K)</th>
+                <th colspan="5" class="section-sources">Funding Draws & Transparency ($K)</th>
                 <th colspan="4" class="section-balances">Year-End Wrappers ($K)</th>
                 <th colspan="5" class="section-metrics">Tax Optimization Metrics & Surcharges</th>
             </tr>
             <tr>
                 <th>Yr</th><th>Age</th>
                 <th class="section-demand">Gross</th><th class="section-demand">Deficit</th>
-                <th class="section-sources">Floor+RMD</th><th class="section-sources">Cash</th><th class="section-sources">Brok</th><th class="section-sources">Pre/Roth</th>
+                <th class="section-sources">Floor+RMD</th><th class="section-sources">Cash Pool</th><th class="section-sources">Brok Princ.</th><th class="section-sources">CapGains Sourced</th><th class="section-sources">Pre/Roth Portfolio</th>
                 <th class="section-balances">Cash</th><th class="section-balances">Brok</th><th class="section-balances">PreTax</th><th class="section-balances">Roth</th>
                 <th class="section-metrics">RMD</th><th class="section-metrics">Conv.</th><th class="section-metrics">AGI</th><th class="section-metrics">Eff Tax %</th><th class="section-metrics">IRMAA</th>
             </tr>
         </thead>
         <tbody id="results-body">
-            <tr><td colspan="17" style="text-align:center; color:#64748b; padding:8px;">Execute parameters to compile matrix ledger.</td></tr>
+            <tr><td colspan="18" style="text-align:center; color:#64748b; padding:8px;">Execute parameters to compile matrix ledger.</td></tr>
         </tbody>
     </table>
 </div>
@@ -213,7 +213,6 @@ def calculate_dynamic_tax(income, status, force_sunset, current_sim_year):
 
 def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset):
     accounts = []
-    # Force add a hidden Roth account option if missing to collect optimized conversions
     has_roth = any(t == 'Roth' for t in a_types)
     for idx in range(len(a_names)):
         accounts.append({'name': a_names[idx], 'type': a_types[idx], 'balance': a_balances[idx], 'basis': a_bases[idx], 'rate': a_returns[idx]})
@@ -263,7 +262,7 @@ def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spen
         ordinary_income_flow = current_year_floor + rmd_req
         capital_gains_realized = 0.0
 
-        # RMD Deductions
+        # RMD Reductions
         rem_rmd = rmd_req
         for acc in accounts:
             if acc['type'] == 'Traditional' and acc['balance'] > 0:
@@ -288,19 +287,28 @@ def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spen
 
         net_deficit = max(0.0, realized_cash_demand - base_revenue_flow)
         rem_cash_needed = net_deficit
-        sourced_cash, sourced_brokerage, sourced_portfolio = 0.0, 0.0, 0.0
+        
+        sourced_cash = 0.0
+        sourced_brokerage_principal = 0.0
+        sourced_brokerage_capgains = 0.0
+        sourced_portfolio = 0.0
 
         for c_type in ['Cash', 'Brokerage', 'Traditional', 'Roth']:
             if rem_cash_needed <= 0: break
             for acc in accounts:
                 if acc['type'] == c_type and acc['balance'] > 0:
                     pull = min(rem_cash_needed, acc['balance'])
-                    if c_type == 'Cash': sourced_cash += pull
+                    if c_type == 'Cash': 
+                        sourced_cash += pull
                     elif c_type == 'Brokerage':
                         g_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
-                        capital_gains_realized += pull * g_ratio
-                        sourced_brokerage += pull
-                        acc['basis'] -= (pull * (1.0 - g_ratio))
+                        cg_share = pull * g_ratio
+                        pr_share = pull - cg_share
+                        
+                        capital_gains_realized += cg_share
+                        sourced_brokerage_capgains += cg_share
+                        sourced_brokerage_principal += pr_share
+                        acc['basis'] -= pr_share
                     else:
                         if acc['type'] == 'Traditional': ordinary_income_flow += pull
                         sourced_portfolio += pull
@@ -356,7 +364,8 @@ def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spen
 
         ledger_logs.append({
             'yr': yr, 'age': age, 'realized_cash_demand': realized_cash_demand, 'net_deficit': net_deficit,
-            'base_revenue_flow': base_revenue_flow, 'sourced_cash': sourced_cash, 'sourced_brokerage': sourced_brokerage,
+            'base_revenue_flow': base_revenue_flow, 'sourced_cash': sourced_cash, 
+            'sourced_brokerage_principal': sourced_brokerage_principal, 'sourced_brokerage_capgains': sourced_brokerage_capgains,
             'sourced_portfolio': sourced_portfolio, 'end_c': end_c, 'end_b': end_b, 'end_t': end_t, 'end_r': end_r,
             'rmd_req': rmd_req, 'total_conv_made': total_conv_made, 'calculated_agi': calculated_agi,
             'effective_tax_rate': effective_tax_rate, 'irmaa_status': irmaa_status, 'networth': current_networth
@@ -430,7 +439,8 @@ def execute_simulation_matrix():
                     <td class='section-demand' style='color:#0284c7;'>${row['net_deficit']/1000:,.1f}k</td>
                     <td class='section-sources'>${row['base_revenue_flow']/1000:,.1f}k</td>
                     <td class='section-sources'>${row['sourced_cash']/1000:,.1f}k</td>
-                    <td class='section-sources'>${row['sourced_brokerage']/1000:,.1f}k</td>
+                    <td class='section-sources'>${row['sourced_brokerage_principal']/1000:,.1f}k</td>
+                    <td class='section-sources' style='color:#b51a1a;'>${row['sourced_brokerage_capgains']/1000:,.1f}k</td>
                     <td class='section-sources'>${row['sourced_portfolio']/1000:,.1f}k</td>
                     <td class='section-balances'>${row['end_c']/1000:,.1f}k</td>
                     <td class='section-balances'>${row['end_b']/1000:,.1f}k</td>
@@ -446,7 +456,6 @@ def execute_simulation_matrix():
         document.getElementById('table-header-title').innerText = f"Granular Ledger Audit Profile (Strategy Target: {int(chosen_bracket_rate*100)}%)"
         document.getElementById('results-body').innerHTML = "".join(deterministic_outputs)
         
-        # Package and transmit all four dataset tracks out to the javascript area chart renderer
         window.renderStackedChart(
             json.dumps(run_labels), 
             json.dumps(stack_cash), 
@@ -502,32 +511,32 @@ window.renderStackedChart = function(labelsJs, cashJs, brokerageJs, pretaxJs, ro
 
 function triggerEngine() { if (window.execute_simulation_matrix) { window.execute_simulation_matrix(); } }
 
-function getInputsSnapshot() {
-    const collectValues = selector => Array.from(document.querySelectorAll(selector)).map(i => i.value);
-    return {
-        global: {
-            current_age: document.getElementById('current_age').value, retirement_age: document.getElementById('retirement_age').value,
-            inflation_rate: document.getElementById('inflation_rate').value, annual_spending: document.getElementById('annual_spending').value,
-            cash_buffer_years: document.getElementById('cash_buffer_years').value, filing_status: document.getElementById('filing_status').value, 
-            target_bracket: document.getElementById('target_bracket').value, tax_regime_mode: document.getElementById('tax_regime_mode').value,
-            state_tax_rate: document.getElementById('state_tax_rate').value, annual_savings_contribution: document.getElementById('annual_savings_contribution').value
-        },
-        floors: collectValues('.floor-name').map((_, i) => ({ name: collectValues('.floor-name')[i], start: collectValues('.floor-start')[i], end: collectValues('.floor-end')[i], amount: collectValues('.floor-amount')[i] })),
-        outlays: collectValues('.outlay-age').map((_, i) => ({ type: collectValues('.outlay-type')[i], age: collectValues('.outlay-age')[i], amount: collectValues('.outlay-amount')[i] })),
-        accounts: collectValues('.acc-name').map((_, i) => ({ name: collectValues('.acc-name')[i], type: collectValues('.acc-type')[i], balance: collectValues('.acc-balance')[i], basis: collectValues('.acc-basis')[i], rate: collectValues('.acc-return')[i] }))
+function saveToBrowserStorage() {
+    const data = {
+        current_age: document.getElementById('current_age').value,
+        retirement_age: document.getElementById('retirement_age').value,
+        inflation_rate: document.getElementById('inflation_rate').value,
+        annual_spending: document.getElementById('annual_spending').value,
+        cash_buffer_years: document.getElementById('cash_buffer_years').value,
+        filing_status: document.getElementById('filing_status').value,
+        tax_regime_mode: document.getElementById('tax_regime_mode').value,
+        target_bracket: document.getElementById('target_bracket').value,
+        state_tax_rate: document.getElementById('state_tax_rate').value,
+        annual_savings_contribution: document.getElementById('annual_savings_contribution').value
     };
+    localStorage.setItem('retirement_matrix_v14_data', JSON.stringify(data));
+    alert('Configuration saved to browser storage!');
 }
 
-function saveToBrowserStorage() { localStorage.setItem('retirement_engine_v14', JSON.stringify(getInputsSnapshot())); alert("Locked into browser storage."); }
 function loadFromBrowserStorage() {
-    const backup = localStorage.getItem('retirement_engine_v14'); if(!backup) return alert("No profile workspace located.");
-    const data = JSON.parse(backup);
-    Object.keys(data.global).forEach(key => { if(document.getElementById(key)) document.getElementById(key).value = data.global[key]; });
-    const rebuildTable = (bodyId, array, htmlBuilder) => { const target = document.getElementById(bodyId); target.innerHTML = ''; array.forEach(item => target.insertAdjacentHTML('beforeend', htmlBuilder(item))); };
-    rebuildTable('income-floor-body', data.floors, f => `<tr><td class="txt-left"><input type="text" class="floor-name" value="${f.name}"></td><td><input type="number" class="floor-start" value="${f.start}"></td><td><input type="number" class="floor-end" value="${f.end}"></td><td><input type="number" class="floor-amount" value="${f.amount}"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
-    rebuildTable('outlays-body', data.outlays, o => `<tr><td><select class="outlay-type"><option value="Outlay" ${o.type==='Outlay'?'selected':''}>Outlay Shock</option><option value="Conversion" ${o.type==='Conversion'?'selected':''}>Roth Conv Event</option></select></td><td><input type="number" class="outlay-age" value="${o.age}"></td><td><input type="number" class="outlay-amount" value="${o.amount}"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
-    rebuildTable('accounts-body', data.accounts, a => `<tr><td class="txt-left"><input type="text" class="acc-name" value="${a.name}"></td><td><select class="acc-type"><option value="Traditional" ${a.type==='Traditional'?'selected':''}>Traditional</option><option value="Roth" ${a.type==='Roth'?'selected':''}>Roth</option><option value="Brokerage" ${a.type==='Brokerage'?'selected':''}>Taxable Brokerage</option><option value="Cash" ${a.type==='Cash'?'selected':''}>Cash/HYSA</option></select></td><td><input type="number" class="acc-balance" value="${a.balance}"></td><td><input type="number" class="acc-basis" value="${a.basis}"></td><td><input type="number" class="acc-return" step="0.01" value="${a.rate}"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
-    alert("Variables reloaded.");
+    const raw = localStorage.getItem('retirement_matrix_v14_data');
+    if(!raw) { alert('No saved configuration found.'); return; }
+    const data = JSON.parse(raw);
+    for(let key in data) {
+        const el = document.getElementById(key);
+        if(el) el.value = data[key];
+    }
+    alert('Configuration loaded successfully!');
 }
 </script>
 </body>
