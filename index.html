@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retirement Engine v14 - Stacked Asset Allocation Matrix</title>
+    <title>Retirement Engine v15 - Hybrid Stochastic Matrix</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2026.3.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -19,7 +19,7 @@
         th { background-color: #e2e8f0; color: #0f172a; font-weight: 700; text-align: center; }
         .btn { background: #2563eb; color: white; border: none; padding: 3px 6px; font-weight: bold; cursor: pointer; border-radius: 3px; font-size: 0.72rem; }
         .btn:hover { background: #1d4ed8; }
-        #chart-wrapper { width: 100%; height: 180px; margin: 6px 0; background: #fafafa; border: 1px solid #cbd5e1; border-radius: 3px; }
+        #chart-wrapper { width: 100%; height: 220px; margin: 6px 0; background: #fafafa; border: 1px solid #cbd5e1; border-radius: 3px; }
         .section-demand { background-color: #f0f9ff; }
         .section-sources { background-color: #fefecb; }
         .section-balances { background-color: #f0fdf4; }
@@ -33,7 +33,7 @@
 
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; background: #1e3a8a; color: white; padding: 3px 8px; border-radius: 3px;">
-        <span style="font-weight: bold; font-size: 0.85rem;">Retirement Matrix v14 [Stacked Asset Stratification]</span>
+        <span style="font-weight: bold; font-size: 0.85rem;">Retirement Matrix v15 [Hybrid Stochastic Optimizer]</span>
         <div style="display: flex; gap: 4px;">
             <button class="btn" style="background:#0ea5e9; padding: 1px 5px;" onclick="saveToBrowserStorage()">💾 Save</button>
             <button class="btn" style="background:#64748b; padding: 1px 5px;" onclick="loadFromBrowserStorage()">📂 Load</button>
@@ -41,11 +41,18 @@
     </div>
 
     <div id="optimizer-diagnostic-panel" class="diagnostic-card" style="margin-top: 4px;">
-        📊 Run the execution macro below to build a stacked chronological layer map of your tax wrappers.
+        📊 Select execution settings and run the simulation matrix.
     </div>
 
     <h3>Strategic System Controls</h3>
     <div class="grid-inputs">
+        <div class="input-group">
+            <label>Execution Engine Mode</label>
+            <select id="simulation_mode" onchange="toggleModeUI()">
+                <option value="DETERMINISTIC" selected>📈 Deterministic Tax Optimizer</option>
+                <option value="STOCHASTIC">🎲 Stochastic Monte Carlo (1k Trials)</option>
+            </select>
+        </div>
         <div class="input-group"><label>Current Age</label><input type="number" id="current_age" value="62"></div>
         <div class="input-group"><label>Retirement Age</label><input type="number" id="retirement_age" value="66"></div>
         <div class="input-group"><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.005" value="0.03"></div>
@@ -146,7 +153,7 @@
 
     <h3 id="table-header-title">Granular Liquidation Audit Ledger ($K View)</h3>
     <table style="width:100%;">
-        <thead>
+        <thead id="table-head-deterministic">
             <tr>
                 <th colspan="2">Timeline</th>
                 <th colspan="2" class="section-demand">Needs ($K)</th>
@@ -170,6 +177,7 @@
 
 <script type="py">
 import json
+import random
 from pyscript import document, window
 
 BRACKETS_CURRENT = {
@@ -185,6 +193,9 @@ BRACKETS_REVERTED = {
 DEDUCTION_REVERTED = {'Single': 8500, 'MFJ': 17000}
 
 IRMAA_THRESHOLDS = {'Single': [109000, 137000, 171000, 205000], 'MFJ': [218000, 274000, 342000, 410000]}
+
+# Hidden constant volatilities for stochastic simulation
+VOLATILITIES = {'Brokerage': 0.15, 'Traditional': 0.16, 'Roth': 0.16, 'Cash': 0.02}
 
 def safe_float(element_id, default=0.0):
     val = document.getElementById(element_id).value.strip()
@@ -211,7 +222,7 @@ def calculate_dynamic_tax(income, status, force_sunset, current_sim_year):
             break
     return tax
 
-def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset):
+def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, is_stochastic=False):
     accounts = []
     has_roth = any(t == 'Roth' for t in a_types)
     for idx in range(len(a_names)):
@@ -262,14 +273,12 @@ def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spen
         ordinary_income_flow = current_year_floor + rmd_req
         capital_gains_realized = 0.0
 
-        # RMD Reductions
         rem_rmd = rmd_req
         for acc in accounts:
             if acc['type'] == 'Traditional' and acc['balance'] > 0:
                 w = min(rem_rmd, acc['balance'])
                 acc['balance'] -= w; rem_rmd -= w
 
-        # Cash Buffer Maintenance
         target_cash_reserve = base_need * buffer_years if age >= ret_age else 0.0
         current_cash_pool = sum(a['balance'] for a in accounts if a['type'] == 'Cash')
         
@@ -314,7 +323,6 @@ def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spen
                         sourced_portfolio += pull
                     acc['balance'] -= pull; rem_cash_needed -= pull
 
-        # Active Optimization Conversion Pass
         total_conv_made = 0.0
         current_trad_bal = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
         combined_conversion_target = manual_conversion_demand + max(0.0, max_income_allowed - ordinary_income_flow)
@@ -346,17 +354,24 @@ def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spen
                     p = min(rem_tax, acc['balance'])
                     acc['balance'] -= p; rem_tax -= p
 
+        # Growth processing with stochastic conditional variability injection
         for acc in accounts:
             if acc['balance'] > 0:
-                growth = acc['balance'] * acc['rate']
+                if is_stochastic:
+                    vol = VOLATILITIES.get(acc['type'], 0.12)
+                    sim_return = random.normalvariate(acc['rate'], vol)
+                else:
+                    sim_return = acc['rate']
+                
+                growth = acc['balance'] * sim_return
                 acc['balance'] += growth
                 if acc['type'] in ['Brokerage', 'Cash']: acc['basis'] += growth * 0.3
 
-        end_c = sum(a['balance'] for a in accounts if a['type'] == 'Cash')
-        end_b = sum(a['balance'] for a in accounts if a['type'] == 'Brokerage')
-        end_t = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
-        end_r = sum(a['balance'] for a in accounts if a['type'] == 'Roth')
-        current_networth = sum(a['balance'] for a in accounts)
+        end_c = max(0.0, sum(a['balance'] for a in accounts if a['type'] == 'Cash'))
+        end_b = max(0.0, sum(a['balance'] for a in accounts if a['type'] == 'Brokerage'))
+        end_t = max(0.0, sum(a['balance'] for a in accounts if a['type'] == 'Traditional'))
+        end_r = max(0.0, sum(a['balance'] for a in accounts if a['type'] == 'Roth'))
+        current_networth = end_c + end_b + end_t + end_r
 
         lookback_val = historical_agi.get(age - 2, 0.0)
         irmaa_status = "Safe"
@@ -375,6 +390,7 @@ def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spen
 
 def execute_simulation_matrix():
     try:
+        engine_mode = document.getElementById('simulation_mode').value
         cur_age = safe_int('current_age', 62)
         ret_age = safe_int('retirement_age', 66)
         inflation = safe_float('inflation_rate', 0.03)
@@ -403,74 +419,163 @@ def execute_simulation_matrix():
         a_bases = [float(i.value or 0) for i in document.querySelectorAll('.acc-basis')]
         a_returns = [float(i.value or 0) for i in document.querySelectorAll('.acc-return')]
 
-        brackets_to_test = [0.0, 0.12, 0.22, 0.24]
-        optimization_results = {}
-        for br in brackets_to_test:
-            nw, tx, _ = run_isolated_scenario(br, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset)
-            optimization_results[br] = {'networth': nw, 'taxes': tx}
-            
-        best_bracket = max(optimization_results, key=lambda k: optimization_results[k]['networth'])
-        chosen_bracket_rate = best_bracket if strategy_input == "AUTO" else float(strategy_input)
+        if engine_mode == "DETERMINISTIC":
+            brackets_to_test = [0.0, 0.12, 0.22, 0.24]
+            optimization_results = {}
+            for br in brackets_to_test:
+                nw, tx, _ = run_isolated_scenario(br, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, False)
+                optimization_results[br] = {'networth': nw, 'taxes': tx}
+                
+            best_bracket = max(optimization_results, key=lambda k: optimization_results[k]['networth'])
+            chosen_bracket_rate = best_bracket if strategy_input == "AUTO" else float(strategy_input)
 
-        diag_html = f"<strong>🤖 Multi-Regime Strategy Calibration Result:</strong><br>"
-        for br, res in optimization_results.items():
-            b_label = f"Convert to {int(br*100)}% Bracket" if br > 0 else "No Active Conversions"
-            diag_html += f"• {b_label} → Terminal Net Worth: <strong>${res['networth']/1000:,.1f}k</strong> | Lifetime Taxes: ${res['taxes']/1000:,.1f}k<br>"
-        diag_html += f"🏆 <strong>Chart Plotter Strategy Locked:</strong> Rendering stacked structures based on filling the <strong>{int(chosen_bracket_rate*100)}% bracket</strong>."
-        document.getElementById('optimizer-diagnostic-panel').innerHTML = diag_html
+            diag_html = f"<strong>🤖 Multi-Regime Strategy Calibration Result:</strong><br>"
+            for br, res in optimization_results.items():
+                b_label = f"Convert to {int(br*100)}% Bracket" if br > 0 else "No Active Conversions"
+                diag_html += f"• {b_label} → Terminal Net Worth: <strong>${res['networth']/1000:,.1f}k</strong> | Lifetime Taxes: ${res['taxes']/1000:,.1f}k<br>"
+            diag_html += f"🏆 <strong>Strategy Locked:</strong> Rendering deterministic stacked structures using the <strong>{int(chosen_bracket_rate*100)}% bracket</strong>."
+            document.getElementById('optimizer-diagnostic-panel').innerHTML = diag_html
 
-        _, _, active_logs = run_isolated_scenario(chosen_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset)
-        
-        deterministic_outputs = []
-        run_labels = []
-        stack_cash, stack_brokerage, stack_pretax, stack_roth = [], [], [], []
-        
-        for row in active_logs:
-            run_labels.append(f"Age {row['age']}")
-            stack_cash.append(row['end_c'])
-            stack_brokerage.append(row['end_b'])
-            stack_pretax.append(row['end_t'])
-            stack_roth.append(row['end_r'])
+            _, _, active_logs = run_isolated_scenario(chosen_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, False)
             
-            deterministic_outputs.append(f"""
-                <tr>
-                    <td>{row['yr']}</td><td>{row['age']}</td>
-                    <td class='section-demand'>${row['realized_cash_demand']/1000:,.1f}k</td>
-                    <td class='section-demand' style='color:#0284c7;'>${row['net_deficit']/1000:,.1f}k</td>
-                    <td class='section-sources'>${row['base_revenue_flow']/1000:,.1f}k</td>
-                    <td class='section-sources'>${row['sourced_cash']/1000:,.1f}k</td>
-                    <td class='section-sources'>${row['sourced_brokerage_principal']/1000:,.1f}k</td>
-                    <td class='section-sources' style='color:#b51a1a;'>${row['sourced_brokerage_capgains']/1000:,.1f}k</td>
-                    <td class='section-sources'>${row['sourced_portfolio']/1000:,.1f}k</td>
-                    <td class='section-balances'>${row['end_c']/1000:,.1f}k</td>
-                    <td class='section-balances'>${row['end_b']/1000:,.1f}k</td>
-                    <td class='section-balances' style='color:#b45309;'>${row['end_t']/1000:,.1f}k</td>
-                    <td class='section-balances' style='color:#16a34a;'>${row['end_r']/1000:,.1f}k</td>
-                    <td class='section-metrics'>${row['rmd_req']/1000:,.1f}k</td>
-                    <td class='section-metrics' style='color:#2563eb;'>${row['total_conv_made']/1000:,.1f}k</td>
-                    <td class='section-metrics'>${row['calculated_agi']/1000:,.1f}k</td>
-                    <td class='section-metrics' style='font-weight:600; color:#dc2626;'>{row['effective_tax_rate']:.1f}%</td>
-                    <td class='section-metrics'>{row['irmaa_status']}</td>
-                </tr>
-            """)
-        document.getElementById('table-header-title').innerText = f"Granular Ledger Audit Profile (Strategy Target: {int(chosen_bracket_rate*100)}%)"
-        document.getElementById('results-body').innerHTML = "".join(deterministic_outputs)
-        
-        window.renderStackedChart(
-            json.dumps(run_labels), 
-            json.dumps(stack_cash), 
-            json.dumps(stack_brokerage), 
-            json.dumps(stack_pretax), 
-            json.dumps(stack_roth)
-        )
+            deterministic_outputs = []
+            run_labels, stack_cash, stack_brokerage, stack_pretax, stack_roth = [], [], [], [], []
+            
+            for row in active_logs:
+                run_labels.append(f"Age {row['age']}")
+                stack_cash.append(row['end_c'])
+                stack_brokerage.append(row['end_b'])
+                stack_pretax.append(row['end_t'])
+                stack_roth.append(row['end_r'])
+                
+                deterministic_outputs.append(f"""
+                    <tr>
+                        <td>{row['yr']}</td><td>{row['age']}</td>
+                        <td class='section-demand'>${row['realized_cash_demand']/1000:,.1f}k</td>
+                        <td class='section-demand' style='color:#0284c7;'>${row['net_deficit']/1000:,.1f}k</td>
+                        <td class='section-sources'>${row['base_revenue_flow']/1000:,.1f}k</td>
+                        <td class='section-sources'>${row['sourced_cash']/1000:,.1f}k</td>
+                        <td class='section-sources'>${row['sourced_brokerage_principal']/1000:,.1f}k</td>
+                        <td class='section-sources' style='color:#b51a1a;'>${row['sourced_brokerage_capgains']/1000:,.1f}k</td>
+                        <td class='section-sources'>${row['sourced_portfolio']/1000:,.1f}k</td>
+                        <td class='section-balances'>${row['end_c']/1000:,.1f}k</td>
+                        <td class='section-balances'>${row['end_b']/1000:,.1f}k</td>
+                        <td class='section-balances' style='color:#b45309;'>${row['end_t']/1000:,.1f}k</td>
+                        <td class='section-balances' style='color:#16a34a;'>${row['end_r']/1000:,.1f}k</td>
+                        <td class='section-metrics'>${row['rmd_req']/1000:,.1f}k</td>
+                        <td class='section-metrics' style='color:#2563eb;'>${row['total_conv_made']/1000:,.1f}k</td>
+                        <td class='section-metrics'>${row['calculated_agi']/1000:,.1f}k</td>
+                        <td class='section-metrics' style='font-weight:600; color:#dc2626;'>{row['effective_tax_rate']:.1f}%</td>
+                        <td class='section-metrics'>{row['irmaa_status']}</td>
+                    </tr>
+                """)
+            document.getElementById('table-header-title').innerText = f"Granular Ledger Audit Profile (Strategy Target: {int(chosen_bracket_rate*100)}%)"
+            document.getElementById('results-body').innerHTML = "".join(deterministic_outputs)
+            
+            window.renderChartInterface(False, json.dumps(run_labels), json.dumps(stack_cash), json.dumps(stack_brokerage), json.dumps(stack_pretax), json.dumps(stack_roth))
+
+        else:
+            # STOCHASTIC MONTE CARLO MODE (1000 trials execution loop)
+            trials_count = 1000
+            yearly_trajectories = {y: [] for y in range(1, 41)}
+            sample_logs = None
+            success_count = 0
+            
+            chosen_bracket_rate = 0.0 if strategy_input == "AUTO" else float(strategy_input)
+
+            for _ in range(trials_count):
+                term_nw, _, logs = run_isolated_scenario(chosen_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, True)
+                if term_nw > 0:
+                    success_count += 1
+                for row in logs:
+                    yearly_trajectories[row['yr']].append(row['networth'])
+                if sample_logs is None:
+                    sample_logs = logs
+
+            p10_series, p50_series, p90_series = [], [], []
+            run_labels = []
+            stochastic_outputs = []
+
+            for y in range(1, 41):
+                age = cur_age + y - 1
+                run_labels.append(f"Age {age}")
+                sorted_vals = sorted(yearly_trajectories[y])
+                
+                # Extract accurate statistical percentile slices
+                p10 = sorted_vals[int(trials_count * 0.10)]
+                p50 = sorted_vals[int(trials_count * 0.50)]
+                p90 = sorted_vals[int(trials_count * 0.90)]
+                
+                p10_series.append(p10)
+                p50_series.append(p50)
+                p90_series.append(p90)
+
+                stochastic_outputs.append(f"""
+                    <tr>
+                        <td>{y}</td><td>{age}</td>
+                        <td colspan='3' style='text-align:center; background:#fef2f2;'>${p10/1000:,.1f}k</td>
+                        <td colspan='4' style='text-align:center; background:#f0fdf4; font-weight:bold;'>${p50/1000:,.1f}k</td>
+                        <td colspan='4' style='text-align:center; background:#eff6ff;'>${p90/1000:,.1f}k</td>
+                        <td colspan='5' style='text-align:center; color:#64748b;'>Aggregated across 1,000 trials</td>
+                    </tr>
+                """)
+
+            prob_of_success = (success_count / trials_count) * 100
+            diag_html = f"<strong>🎲 Monte Carlo Simulation Succeeded:</strong> processed 1,000 randomized lifepaths.<br>"
+            diag_html += f"🏁 <strong>Probability of Success: {prob_of_success:.1f}%</strong> of paths maintained a solvent capital ledger framework.<br>"
+            diag_html += f"📊 Chart display has swapped to render stochastic percentile risk zones over asset categories."
+            document.getElementById('optimizer-diagnostic-panel').innerHTML = diag_html
+            
+            document.getElementById('table-header-title').innerText = f"Stochastic Risk Profile Matrix Ledger (Success Prob: {prob_of_success:.1f}%)"
+            document.getElementById('results-body').innerHTML = "".join(stochastic_outputs)
+
+            window.renderChartInterface(True, json.dumps(run_labels), json.dumps(p10_series), json.dumps(p50_series), json.dumps(p90_series), "[]")
 
     except Exception as e:
-        window.alert(f"Matrix Processing Engine Exception Error: {str(e)}")
+        window.alert(f"Processing Engine Matrix Exception: {str(e)}")
 
 window.execute_simulation_matrix = execute_simulation_matrix
 </script>
 
 <script>
+function toggleModeUI() {
+    const mode = document.getElementById('simulation_mode').value;
+    const tableHead = document.getElementById('table-head-deterministic');
+    if (mode === "STOCHASTIC") {
+        tableHead.innerHTML = `
+            <tr>
+                <th colspan="2">Timeline</th>
+                <th colspan="3" style="background:#fef2f2; color:#991b1b;">10th Percentile (Downside Case)</th>
+                <th colspan="4" style="background:#f0fdf4; color:#166534;">50th Percentile (Median Path)</th>
+                <th colspan="4" style="background:#eff6ff; color:#1e40af;">90th Percentile (Upside Potential)</th>
+                <th colspan="5">Stochastic Diagnostics</th>
+            </tr>
+            <tr>
+                <th>Yr</th><th>Age</th>
+                <th colspan="3" style="background:#fef2f2;">Net Worth ($K)</th>
+                <th colspan="4" style="background:#f0fdf4;">Net Worth ($K)</th>
+                <th colspan="4" style="background:#eff6ff;">Net Worth ($K)</th>
+                <th colspan="5">Engine Track</th>
+            </tr>`;
+    } else {
+        tableHead.innerHTML = `
+            <tr>
+                <th colspan="2">Timeline</th>
+                <th colspan="2" class="section-demand">Needs ($K)</th>
+                <th colspan="5" class="section-sources">Funding Draws & Transparency ($K)</th>
+                <th colspan="4" class="section-balances">Year-End Wrappers ($K)</th>
+                <th colspan="5" class="section-metrics">Tax Optimization Metrics & Surcharges</th>
+            </tr>
+            <tr>
+                <th>Yr</th><th>Age</th>
+                <th class="section-demand">Gross</th><th class="section-demand">Deficit</th>
+                <th class="section-sources">Floor+RMD</th><th class="section-sources">Cash Pool</th><th class="section-sources">Brok Princ.</th><th class="section-sources">CapGains Sourced</th><th class="section-sources">Pre/Roth Portfolio</th>
+                <th class="section-balances">Cash</th><th class="section-balances">Brok</th><th class="section-balances">PreTax</th><th class="section-balances">Roth</th>
+                <th class="section-metrics">RMD</th><th class="section-metrics">Conv.</th><th class="section-metrics">AGI</th><th class="section-metrics">Eff Tax %</th><th class="section-metrics">IRMAA</th>
+            </tr>`;
+    }
+}
+
 function addFloorRow() {
     document.getElementById('income-floor-body').insertAdjacentHTML('beforeend', `<tr><td class="txt-left"><input type="text" class="floor-name" value="Annuity / Inflow"></td><td><input type="number" class="floor-start" value="65"></td><td><input type="number" class="floor-end" value="95"></td><td><input type="number" class="floor-amount" value="12000"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
 }
@@ -482,28 +587,38 @@ function addAccountRow() {
 }
 
 let activeChartInstance = null;
-window.renderStackedChart = function(labelsJs, cashJs, brokerageJs, pretaxJs, rothJs) {
+window.renderChartInterface = function(isStochastic, labelsJs, track1, track2, track3, track4) {
     const ctx = document.getElementById('canvasChart').getContext('2d');
     if(activeChartInstance) { activeChartInstance.destroy(); }
     
+    const parsedLabels = JSON.parse(labelsJs);
+    let datasets = [];
+
+    if (isStochastic) {
+        datasets = [
+            { label: '🔴 10th Percentile (Downside Risk)', data: JSON.parse(track1), borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.08)', fill: false, borderDash: [4, 4], tension: 0.1, pointRadius: 0 },
+            { label: '🟢 50th Percentile (Median Outlook)', data: JSON.parse(track2), borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.1)', fill: false, borderWidth: 3, tension: 0.1, pointRadius: 0 },
+            { label: '🔵 90th Percentile (Optimistic Growth)', data: JSON.parse(track3), borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', fill: false, borderDash: [4, 4], tension: 0.1, pointRadius: 0 }
+        ];
+    } else {
+        datasets = [
+            { label: '🟪 Liquid Cash Buffer', data: JSON.parse(track1), borderColor: '#9333ea', backgroundColor: 'rgba(147, 51, 234, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
+            { label: '🟦 Taxable Brokerage', data: JSON.parse(track2), borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
+            { label: '🟨 Pre-Tax Traditional IRA', data: JSON.parse(track3), borderColor: '#d97706', backgroundColor: 'rgba(217, 119, 6, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
+            { label: '🟩 Tax-Free Roth Balance', data: JSON.parse(track4), borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.6)', fill: true, tension: 0.1, pointRadius: 0 }
+        ];
+    }
+    
     activeChartInstance = new Chart(ctx, {
         type: 'line',
-        data: {
-            labels: JSON.parse(labelsJs),
-            datasets: [
-                { label: '🟪 Liquid Cash Buffer', data: JSON.parse(cashJs), borderColor: '#9333ea', backgroundColor: 'rgba(147, 51, 234, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
-                { label: '🟦 Taxable Brokerage', data: JSON.parse(brokerageJs), borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
-                { label: '🟨 Pre-Tax Traditional IRA', data: JSON.parse(pretaxJs), borderColor: '#d97706', backgroundColor: 'rgba(217, 119, 6, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
-                { label: '🟩 Tax-Free Roth Balance', data: JSON.parse(rothJs), borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.6)', fill: true, tension: 0.1, pointRadius: 0 }
-            ]
-        },
+        data: { labels: parsedLabels, datasets: datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { labels: { boxWidth: 10, font: { size: 9 } } } },
             scales: {
-                x: { stacked: true },
-                y: { stacked: true, ticks: { callback: function(value) { return '$' + (value/1000).toFixed(0) + 'k'; } } }
+                x: { stacked: !isStochastic },
+                y: { stacked: !isStochastic, ticks: { callback: function(value) { return '$' + (value/1000).toFixed(0) + 'k'; } } }
             }
         }
     });
@@ -524,19 +639,19 @@ function saveToBrowserStorage() {
         state_tax_rate: document.getElementById('state_tax_rate').value,
         annual_savings_contribution: document.getElementById('annual_savings_contribution').value
     };
-    localStorage.setItem('retirement_matrix_v14_data', JSON.stringify(data));
-    alert('Configuration saved to browser storage!');
+    localStorage.setItem('retirement_matrix_v15_data', JSON.stringify(data));
+    alert('Configuration parameters saved successfully!');
 }
 
 function loadFromBrowserStorage() {
-    const raw = localStorage.getItem('retirement_matrix_v14_data');
-    if(!raw) { alert('No saved configuration found.'); return; }
+    const raw = localStorage.getItem('retirement_matrix_v15_data');
+    if(!raw) { alert('No configuration history detected in browser engine cache.'); return; }
     const data = JSON.parse(raw);
     for(let key in data) {
         const el = document.getElementById(key);
         if(el) el.value = data[key];
     }
-    alert('Configuration loaded successfully!');
+    alert('Configuration context successfully loaded.');
 }
 </script>
 </body>
