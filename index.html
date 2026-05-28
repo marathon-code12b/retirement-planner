@@ -296,12 +296,10 @@ def run_simulation_isolated():
                 if item['start'] <= age <= item['end']:
                     current_year_floor += item['amount'] * ((1 + inflation) ** (yr - 1))
 
-            # Calculate explicit RMD rules
             trad_total = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
             rmd_divisor = (27.4 - (age - 73)) if age >= 73 else 0
             rmd_requirement = (trad_total / rmd_divisor) if rmd_divisor > 0 else 0
 
-            # Base structural ordinary income setup
             ordinary_income_flow = current_year_floor + rmd_requirement
             capital_gains_realized = 0
             
@@ -310,7 +308,6 @@ def run_simulation_isolated():
             sourced_from_portfolio_remainder = 0.0
             total_conversions_this_year = 0.0
 
-            # Process RMD Outflow Deductions first
             rem_rmd = rmd_requirement
             for acc in accounts:
                 if acc['type'] == 'Traditional' and acc['balance'] > 0:
@@ -318,11 +315,9 @@ def run_simulation_isolated():
                     acc['balance'] -= withdrawn
                     rem_rmd -= withdrawn
 
-            # Evaluate net residual cash demand left to fund via cash flow routing
             net_deficit_after_forced = max(0, realized_cash_demand - (current_year_floor + rmd_requirement))
             remaining_net_cash_needed = net_deficit_after_forced
 
-            # Liquidation Engine Tracking Outflow Sequence
             liquidation_sequence = ['Cash', 'Brokerage']
             for current_type in liquidation_sequence:
                 if remaining_net_cash_needed <= 0: break
@@ -340,7 +335,6 @@ def run_simulation_isolated():
                         acc['balance'] -= pull
                         remaining_net_cash_needed -= pull
 
-            # Check if Pre-Tax assets are required to finish funding cash needs
             if remaining_net_cash_needed > 0:
                 for acc in accounts:
                     if acc['type'] == 'Traditional' and acc['balance'] > 0:
@@ -350,7 +344,6 @@ def run_simulation_isolated():
                         acc['balance'] -= pull
                         remaining_net_cash_needed -= pull
 
-            # Fallback to Roth for basic spending deficit if everything else is dry
             if remaining_net_cash_needed > 0:
                 for acc in accounts:
                     if acc['type'] == 'Roth' and acc['balance'] > 0:
@@ -359,12 +352,9 @@ def run_simulation_isolated():
                         acc['balance'] -= pull
                         remaining_net_cash_needed -= pull
 
-            # --- STRATEGIC BRACKET MAXIMIZATION MATRIX ---
-            # Dynamically calculate maximum room left in the chosen tax bracket 
             max_income_allowed = get_bracket_max_income(filing_status, target_bracket_rate)
             available_bracket_room = max(0.0, max_income_allowed - ordinary_income_flow)
             
-            # 1. First accommodate pre-scheduled manual conversions
             manual_conv_target = scheduled_conversions.get(age, 0.0)
             current_trad_balance = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
             
@@ -372,17 +362,14 @@ def run_simulation_isolated():
                 actual_manual_conv = min(manual_conv_target, current_trad_balance)
                 ordinary_income_flow += actual_manual_conv
                 total_conversions_this_year += actual_manual_conv
-                # Deduct from Pre-Tax
                 temp_rem = actual_manual_conv
                 for acc in accounts:
                     if acc['type'] == 'Traditional' and acc['balance'] > 0:
                         amt = min(temp_rem, acc['balance'])
                         acc['balance'] -= amt
                         temp_rem -= amt
-                # Track bracket allocation space correction
                 available_bracket_room = max(0.0, max_income_allowed - ordinary_income_flow)
 
-            # 2. Automatically Max Out Remaining Tax Bracket Space using conversions
             current_trad_balance = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
             if available_bracket_room > 0 and current_trad_balance > 0:
                 auto_conversion = min(available_bracket_room, current_trad_balance)
@@ -396,20 +383,17 @@ def run_simulation_isolated():
                         acc['balance'] -= amt
                         temp_rem -= amt
 
-            # Add converted components straight to the destination Roth engine asset pool
             if total_conversions_this_year > 0:
                 for acc in accounts:
                     if acc['type'] == 'Roth':
                         acc['balance'] += total_conversions_this_year
                         break
 
-            # Core final tax computation processing
             calculated_agi = ordinary_income_flow + capital_gains_realized
             ordinary_tax = calculate_progressive_tax(ordinary_income_flow, filing_status)
             capital_gains_tax = capital_gains_realized * 0.15
             total_tax_bill = ordinary_tax + capital_gains_tax
 
-            # Deduct Tax Friction from remaining available liquid wrappers
             rem_tax = total_tax_bill
             for wrapper_pref in ['Cash', 'Brokerage', 'Roth']:
                 if rem_tax <= 0: break
@@ -419,7 +403,6 @@ def run_simulation_isolated():
                         acc['balance'] -= pull
                         rem_tax -= pull
 
-            # Process Compound Market Growth updates
             for acc in accounts:
                 if acc['balance'] > 0:
                     growth = acc['balance'] * acc['rate']
@@ -427,7 +410,6 @@ def run_simulation_isolated():
                     if acc['type'] in ['Brokerage', 'Cash']:
                         acc['basis'] += growth * 0.4
 
-            # Aggregate Dynamic Balances For Detailed Columns Ledger
             end_cash = sum(a['balance'] for a in accounts if a['type'] == 'Cash')
             end_brokerage = sum(a['balance'] for a in accounts if a['type'] == 'Brokerage')
             end_pretax = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
