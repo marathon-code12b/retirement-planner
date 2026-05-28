@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retirement Engine v8 - Asset Liquidation & Conversion Ledger</title>
+    <title>Retirement Engine v9 - Advanced Strategic Income & Tax Vector Matrix</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2026.3.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -26,7 +26,6 @@
         .btn-success:hover { background: #15803d; }
         #chart-wrapper { width: 100%; height: 350px; margin: 25px 0; }
         
-        /* Multi-Column Highlight Sections */
         .section-demand { background-color: #e0f2fe; font-weight: 500; }
         .section-sources { background-color: #fef9c3; }
         .section-balances { background-color: #f0fdf4; }
@@ -37,7 +36,7 @@
 <body>
 
 <div class="container">
-    <h2>Retirement Engine v8 (Dynamic Asset Liquidation Ledger)</h2>
+    <h2>Retirement Engine v9 (Advanced Income Vector & Tax Matrix)</h2>
     
     <div style="margin-bottom: 15px; display: flex; gap: 10px;">
         <button class="btn btn-success" onclick="saveToBrowserStorage()">💾 Save Inputs & Scenario</button>
@@ -61,6 +60,8 @@
                 <option value="0.32">32% Bracket Limit</option>
             </select>
         </div>
+        <div class="input-group"><label>State Income Tax Rate (%)</label><input type="number" id="state_tax_rate" step="0.1" value="4.5"></div>
+        <div class="input-group"><label>Annual Workspace Additions ($)</label><input type="number" id="annual_savings_contribution" value="15000"></div>
     </div>
 
     <h3>Level 1 Ordinary Income: Non-Controllable Revenue Floor</h3>
@@ -174,18 +175,18 @@
                 <th colspan="2" class="section-demand">Cash Requirements</th>
                 <th colspan="4" class="section-sources">All Funding Sources (Must Equal Cash Demand)</th>
                 <th colspan="4" class="section-balances">Year-End Portfolio Balances (After Growth)</th>
-                <th colspan="5" class="section-metrics">Tax, Conversion, & Explicit AGI Source Ledger</th>
+                <th colspan="6" class="section-metrics">Tax, Conversion, IRMAA & Explicit AGI Source Ledger</th>
             </tr>
             <tr>
                 <th>Yr</th><th>Age</th>
                 <th class="section-demand">Cash Demand</th><th class="section-demand">Deficit After Floor</th>
                 <th class="section-sources">Base Revenue (Floor+RMD)</th><th class="section-sources">From Taxable Cash</th><th class="section-sources">From Brokerage</th><th class="section-sources">From Pre/Post Port</th>
                 <th class="section-balances">Cash/HYSA</th><th class="section-balances">Brokerage</th><th class="section-balances">Pre-Tax Trad</th><th class="section-balances">Post-Tax Roth</th>
-                <th class="section-metrics">Calculated RMD</th><th class="section-metrics">Roth Conv. Made</th><th class="section-metrics">Income AGI (Floor, RMD, Yield, Conv)</th><th class="section-metrics">CapGains AGI (Sales Only)</th><th class="section-metrics">Tax Paid (Eff. Rate)</th>
+                <th class="section-metrics">Calculated RMD</th><th class="section-metrics">Roth Conv. Made</th><th class="section-metrics">Calculated AGI</th><th class="section-metrics">IRMAA Surcharge Tier</th><th class="section-metrics">Pre-Retire Savings Add</th><th class="section-metrics">Tax Paid (Eff. Rate)</th>
             </tr>
         </thead>
         <tbody id="results-body">
-            <tr><td colspan="17" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
+            <tr><td colspan="18" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
         </tbody>
     </table>
 </div>
@@ -199,6 +200,12 @@ TAX_BRACKETS = {
     'MFJ': [(23200, 0.10), (94300, 0.12), (201050, 0.22), (383900, 0.24), (487450, 0.32), (731200, 0.35), (float('inf'), 0.37)]
 }
 STANDARD_DEDUCTION = {'Single': 15000, 'MFJ': 30000}
+
+# 2026 Medicare IRMAA Threshold Brackets (Based on 2-year prior AGI lookup)
+IRMAA_THRESHOLDS = {
+    'Single': [106000, 133000, 166000, 199000, 500000],
+    'MFJ': [212000, 266000, 332000, 398000, 750000]
+}
 
 def safe_float(element_id, default=0.0):
     val = document.getElementById(element_id).value.strip()
@@ -239,6 +246,13 @@ def calculate_progressive_tax(income, status):
             break
     return tax
 
+def eval_irmaa_tier(agi, status):
+    thresholds = IRMAA_THRESHOLDS[status]
+    for idx, thresh in enumerate(thresholds):
+        if agi <= thresh:
+            return idx
+    return 5
+
 def run_simulation_isolated():
     try:
         cur_age = safe_int('current_age', 62)
@@ -247,6 +261,8 @@ def run_simulation_isolated():
         spending_base = safe_float('annual_spending', 95000)
         filing_status = document.getElementById('filing_status').value
         target_bracket_rate = float(document.getElementById('target_bracket').value)
+        state_tax_rate = safe_float('state_tax_rate', 4.5) / 100.0
+        pre_retire_savings = safe_float('annual_savings_contribution', 15000)
         
         f_names = document.querySelectorAll('.floor-name')
         f_starts = document.querySelectorAll('.floor-start')
@@ -296,10 +312,21 @@ def run_simulation_isolated():
         outputs = []
         chart_labels = []
         chart_data = []
+        historical_agi = {}
 
         for yr in range(1, 41):
             age = cur_age + yr - 1
             
+            # Pre-retirement workspace savings distribution architecture
+            current_yr_savings = 0.0
+            if age < ret_age:
+                current_yr_savings = pre_retire_savings * ((1 + inflation) ** (yr - 1))
+                # Add asset allocations into traditional bucket by default rule execution
+                for acc in accounts:
+                    if acc['type'] == 'Traditional':
+                        acc['balance'] += current_yr_savings
+                        break
+
             base_need = spending_base * ((1 + inflation) ** (yr - 1)) if age >= ret_age else 0
             shock_need = custom_outlays.get(age, 0.0) * ((1 + inflation) ** (yr - 1))
             realized_cash_demand = base_need + shock_need
@@ -322,7 +349,6 @@ def run_simulation_isolated():
             sourced_from_portfolio_remainder = 0.0
             total_conversions_this_year = 0.0
 
-            # Pre-calculate internal taxable growth yield (40% of standard return on taxable cash/brokerage hits AGI annually)
             taxable_yield_income = 0.0
             for acc in accounts:
                 if acc['type'] in ['Cash', 'Brokerage'] and acc['balance'] > 0:
@@ -333,9 +359,9 @@ def run_simulation_isolated():
             rem_rmd = rmd_requirement
             for acc in accounts:
                 if acc['type'] == 'Traditional' and acc['balance'] > 0:
-                    withdrawn = min(rem_rmd, acc['balance'])
-                    acc['balance'] -= withdrawn
-                    rem_rmd -= withdrawn
+                    with withdrawn = min(rem_rmd, acc['balance']):
+                        acc['balance'] -= withdrawn
+                        rem_rmd -= withdrawn
 
             net_deficit_after_forced = max(0, realized_cash_demand - base_revenue_flow)
             remaining_net_cash_needed = net_deficit_after_forced
@@ -412,11 +438,20 @@ def run_simulation_isolated():
                         break
 
             calculated_agi = ordinary_income_flow + capital_gains_realized
+            historical_agi[age] = calculated_agi
+
+            # Multi-layer Tax Architecture processing
             ordinary_tax = calculate_progressive_tax(ordinary_income_flow, filing_status)
             capital_gains_tax = capital_gains_realized * 0.15
-            total_tax_bill = ordinary_tax + capital_gains_tax
+            state_tax_bill = calculated_agi * state_tax_rate
+            total_tax_bill = ordinary_tax + capital_gains_tax + state_tax_bill
             
             effective_tax_rate = (total_tax_bill / calculated_agi * 100) if calculated_agi > 0 else 0.0
+
+            # 2-Year Look-back IRMAA Vector validation
+            irmaa_lookback_age = age - 2
+            lookback_agi = historical_agi.get(irmaa_lookback_age, 0.0) if age >= 65 else 0.0
+            irmaa_tier = eval_irmaa_tier(lookback_agi, filing_status) if age >= 65 else 0
 
             rem_tax = total_tax_bill
             for wrapper_pref in ['Cash', 'Brokerage', 'Roth']:
@@ -427,7 +462,6 @@ def run_simulation_isolated():
                         acc['balance'] -= pull
                         rem_tax -= pull
 
-            # Process final internal portfolio compounding yield
             for acc in accounts:
                 if acc['balance'] > 0:
                     growth = acc['balance'] * acc['rate']
@@ -444,6 +478,8 @@ def run_simulation_isolated():
             chart_labels.append(f"Age {age}")
             chart_data.append(ending_net_worth)
 
+            irmaa_display = f"Tier {irmaa_tier}" if age >= 65 else "N/A (<65)"
+
             outputs.append(f"""
                 <tr>
                     <td>{yr}</td><td>{age}</td>
@@ -459,8 +495,9 @@ def run_simulation_isolated():
                     <td class='section-balances' style='color:#16a34a; font-weight:600;'>${end_posttax:,.0f}</td>
                     <td class='section-metrics' style='color:#7c3aed;'>${rmd_requirement:,.0f}</td>
                     <td class='section-metrics' style='color:#2563eb; font-weight:600;'>${total_conversions_this_year:,.0f}</td>
-                    <td class='section-metrics' style='color:#0f172a; font-weight:600;'>${ordinary_income_flow:,.0f}</td>
-                    <td class='section-metrics' style='color:#16a34a; font-weight:600;'>${capital_gains_realized:,.0f}</td>
+                    <td class='section-metrics' style='color:#0f172a; font-weight:600;'>${calculated_agi:,.0f}</td>
+                    <td class='section-metrics'>{irmaa_display}</td>
+                    <td class='section-metrics' style='color:#0d9488;'>${current_yr_savings:,.0f}</td>
                     <td><span style='color:#dc2626; font-weight:600;'>${total_tax_bill:,.0f}</span> ({effective_tax_rate:.1f}%)</td>
                 </tr>
             """)
@@ -474,6 +511,53 @@ window.run_simulation_isolated = run_simulation_isolated
 </script>
 
 <script>
+// Keep original UI bindings and append custom additions
+function addFloorRow() {
+    const body = document.getElementById('income-floor-body');
+    body.innerHTML += `<tr><td><input type="text" class="floor-name" value="New Income Stream"></td><td><input type="number" class="floor-start" value="65"></td><td><input type="number" class="floor-end" value="100"></td><td><input type="number" class="floor-amount" value="10000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+}
+function addConversionRow() {
+    const body = document.getElementById('conversions-body');
+    body.innerHTML += `<tr><td><input type="number" class="conv-age" value="65"></td><td><input type="number" class="conv-amount" value="10000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+}
+function addOutlayRow() {
+    const body = document.getElementById('outlays-body');
+    body.innerHTML += `<tr><td><input type="text" class="outlay-name" value="Special Expense"></td><td><input type="number" class="outlay-age" value="70"></td><td><input type="number" class="outlay-amount" value="20000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+}
+function addAccountRow() {
+    const body = document.getElementById('accounts-body');
+    body.innerHTML += `<tr><td><input type="text" class="acc-name" value="Brokerage Sub-Account"></td><td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash/HYSA (Taxable)</option></select></td><td><input type="number" class="acc-balance" value="50000"></td><td><input type="number" class="acc-basis" value="50000"></td><td><input type="number" class="acc-return" step="0.01" value="0.06"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+}
+
+let activeChartInstance = null;
+window.renderChart = function(labelsJson, dataJson) {
+    const ctx = document.getElementById('canvasChart').getContext('2d');
+    const labels = JSON.parse(labelsJson);
+    const data = JSON.parse(dataJson);
+    
+    if(activeChartInstance) { activeChartInstance.destroy(); }
+    
+    activeChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total Real Net Worth Trajectory ($)',
+                data: data,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+function triggerPythonEngine() {
+    if (window.run_simulation_isolated) { window.run_simulation_isolated(); }
+}
+
 function getInputsSnapshot() {
     const data = {
         global: {
@@ -482,7 +566,9 @@ function getInputsSnapshot() {
             inflation_rate: document.getElementById('inflation_rate').value,
             annual_spending: document.getElementById('annual_spending').value,
             filing_status: document.getElementById('filing_status').value,
-            target_bracket: document.getElementById('target_bracket').value
+            target_bracket: document.getElementById('target_bracket').value,
+            state_tax_rate: document.getElementById('state_tax_rate').value,
+            annual_savings_contribution: document.getElementById('annual_savings_contribution').value
         },
         floors: [], conversions: [], outlays: [], accounts: []
     };
@@ -511,12 +597,12 @@ function getInputsSnapshot() {
 }
 
 function saveToBrowserStorage() {
-    localStorage.setItem('retirement_engine_v8_matrix', getInputsSnapshot());
+    localStorage.setItem('retirement_engine_v9_matrix', getInputsSnapshot());
     alert("Scenario properties successfully cached in local secure storage vector!");
 }
 
 function loadFromBrowserStorage() {
-    const raw = localStorage.getItem('retirement_engine_v8_matrix');
+    const raw = localStorage.getItem('retirement_engine_v9_matrix');
     if(!raw) { alert("No saved matrix scenario found in browser storage!"); return; }
     const data = JSON.parse(raw);
     
@@ -526,6 +612,8 @@ function loadFromBrowserStorage() {
     document.getElementById('annual_spending').value = data.global.annual_spending;
     document.getElementById('filing_status').value = data.global.filing_status;
     document.getElementById('target_bracket').value = data.global.target_bracket;
+    document.getElementById('state_tax_rate').value = data.global.state_tax_rate || 4.5;
+    document.getElementById('annual_savings_contribution').value = data.global.annual_savings_contribution || 15000;
 
     const floorBody = document.getElementById('income-floor-body'); floorBody.innerHTML = '';
     data.floors.forEach(f => {
@@ -542,63 +630,6 @@ function loadFromBrowserStorage() {
     const accBody = document.getElementById('accounts-body'); accBody.innerHTML = '';
     data.accounts.forEach(a => {
         accBody.innerHTML += `<tr><td><input type="text" class="acc-name" value="${a.name}"></td><td><select class="acc-type"><option value="Traditional" ${a.type==='Traditional'?'selected':''}>Traditional (Pre-Tax)</option><option value="Roth" ${a.type==='Roth'?'selected':''}>Roth</option><option value="Brokerage" ${a.type==='Brokerage'?'selected':''}>Taxable Brokerage</option><option value="Cash" ${a.type==='Cash'?'selected':''}>Cash/HYSA (Taxable)</option></select></td><td><input type="number" class="acc-balance" value="${a.balance}"></td><td><input type="number" class="acc-basis" value="${a.basis}"></td><td><input type="number" class="acc-return" step="0.01" value="${a.rate}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
-    });
-    alert("Scenario attributes reloaded! Click 'Execute Matrix Simulation Model' to recalculate.");
-}
-
-function addFloorRow() {
-    const tbody = document.getElementById('income-floor-body');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><input type="text" class="floor-name" value="Supplemental Income Stream"></td><td><input type="number" class="floor-start" value="65"></td><td><input type="number" class="floor-end" value="100"></td><td><input type="number" class="floor-amount" value="10000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>`;
-    tbody.appendChild(tr);
-}
-function addConversionRow() {
-    const tbody = document.getElementById('conversions-body');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><input type="number" class="conv-age" value="65"></td><td><input type="number" class="conv-amount" value="40000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>`;
-    tbody.appendChild(tr);
-}
-function addOutlayRow() {
-    const tbody = document.getElementById('outlays-body');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><input type="text" class="outlay-name" value="Capital Expense Event"></td><td><input type="number" class="outlay-age" value="72"></td><td><input type="number" class="outlay-amount" value="30000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>`;
-    tbody.appendChild(tr);
-}
-function addAccountRow() {
-    const tbody = document.getElementById('accounts-body');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><input type="text" class="acc-name" value="Supplemental Account"></td><td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash" selected>Cash/HYSA (Taxable)</option></select></td><td><input type="number" class="acc-balance" value="25000"></td><td><input type="number" class="acc-basis" value="25000"></td><td><input type="number" class="acc-return" step="0.01" value="0.04"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>`;
-    tbody.appendChild(tr);
-}
-
-function triggerPythonEngine() {
-    if (typeof window.run_simulation_isolated === 'function') {
-        window.run_simulation_isolated();
-    } else {
-        alert("The WebAssembly framework is initializing its virtual vectors. Click again in 5 seconds!");
-    }
-}
-
-let chartInstance = null;
-window.renderChart = function(labelsJson, dataJson) {
-    const labels = JSON.parse(labelsJson);
-    const data = JSON.parse(dataJson);
-    if (chartInstance) chartInstance.destroy();
-    const ctx = document.getElementById('canvasChart').getContext('2d');
-    chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Simulated Portfolio Assets Under Management (AUM)',
-                data: data,
-                borderColor: '#1e3a8a',
-                backgroundColor: 'rgba(30, 58, 138, 0.1)',
-                fill: true,
-                tension: 0.1
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
     });
 }
 </script>
