@@ -201,7 +201,6 @@ TAX_BRACKETS = {
 }
 STANDARD_DEDUCTION = {'Single': 15000, 'MFJ': 30000}
 
-# 2026 Medicare IRMAA Threshold Brackets (Based on 2-year prior AGI lookup)
 IRMAA_THRESHOLDS = {
     'Single': [106000, 133000, 166000, 199000, 500000],
     'MFJ': [212000, 266000, 332000, 398000, 750000]
@@ -317,11 +316,9 @@ def run_simulation_isolated():
         for yr in range(1, 41):
             age = cur_age + yr - 1
             
-            # Pre-retirement workspace savings distribution architecture
             current_yr_savings = 0.0
             if age < ret_age:
                 current_yr_savings = pre_retire_savings * ((1 + inflation) ** (yr - 1))
-                # Add asset allocations into traditional bucket by default rule execution
                 for acc in accounts:
                     if acc['type'] == 'Traditional':
                         acc['balance'] += current_yr_savings
@@ -359,9 +356,10 @@ def run_simulation_isolated():
             rem_rmd = rmd_requirement
             for acc in accounts:
                 if acc['type'] == 'Traditional' and acc['balance'] > 0:
-                    with withdrawn = min(rem_rmd, acc['balance']):
-                        acc['balance'] -= withdrawn
-                        rem_rmd -= withdrawn
+                    # Syntax error fixed here: removed contextual context with block
+                    withdrawn = min(rem_rmd, acc['balance'])
+                    acc['balance'] -= withdrawn
+                    rem_rmd -= withdrawn
 
             net_deficit_after_forced = max(0, realized_cash_demand - base_revenue_flow)
             remaining_net_cash_needed = net_deficit_after_forced
@@ -440,7 +438,6 @@ def run_simulation_isolated():
             calculated_agi = ordinary_income_flow + capital_gains_realized
             historical_agi[age] = calculated_agi
 
-            # Multi-layer Tax Architecture processing
             ordinary_tax = calculate_progressive_tax(ordinary_income_flow, filing_status)
             capital_gains_tax = capital_gains_realized * 0.15
             state_tax_bill = calculated_agi * state_tax_rate
@@ -448,7 +445,6 @@ def run_simulation_isolated():
             
             effective_tax_rate = (total_tax_bill / calculated_agi * 100) if calculated_agi > 0 else 0.0
 
-            # 2-Year Look-back IRMAA Vector validation
             irmaa_lookback_age = age - 2
             lookback_agi = historical_agi.get(irmaa_lookback_age, 0.0) if age >= 65 else 0.0
             irmaa_tier = eval_irmaa_tier(lookback_agi, filing_status) if age >= 65 else 0
@@ -478,7 +474,7 @@ def run_simulation_isolated():
             chart_labels.append(f"Age {age}")
             chart_data.append(ending_net_worth)
 
-            irmaa_display = f"Tier {irmaa_tier}" if age >= 65 else "N/A (<65)"
+            irmaa_display = f"Tier {irmaa_tier}" if age >= 65 else "N/A"
 
             outputs.append(f"""
                 <tr>
@@ -511,22 +507,21 @@ window.run_simulation_isolated = run_simulation_isolated
 </script>
 
 <script>
-// Keep original UI bindings and append custom additions
 function addFloorRow() {
     const body = document.getElementById('income-floor-body');
-    body.innerHTML += `<tr><td><input type="text" class="floor-name" value="New Income Stream"></td><td><input type="number" class="floor-start" value="65"></td><td><input type="number" class="floor-end" value="100"></td><td><input type="number" class="floor-amount" value="10000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+    body.insertAdjacentHTML('beforeend', `<tr><td><input type="text" class="floor-name" value="New Income Stream"></td><td><input type="number" class="floor-start" value="65"></td><td><input type="number" class="floor-end" value="100"></td><td><input type="number" class="floor-amount" value="10000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`);
 }
 function addConversionRow() {
     const body = document.getElementById('conversions-body');
-    body.innerHTML += `<tr><td><input type="number" class="conv-age" value="65"></td><td><input type="number" class="conv-amount" value="10000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+    body.insertAdjacentHTML('beforeend', `<tr><td><input type="number" class="conv-age" value="65"></td><td><input type="number" class="conv-amount" value="10000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`);
 }
 function addOutlayRow() {
     const body = document.getElementById('outlays-body');
-    body.innerHTML += `<tr><td><input type="text" class="outlay-name" value="Special Expense"></td><td><input type="number" class="outlay-age" value="70"></td><td><input type="number" class="outlay-amount" value="20000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+    body.insertAdjacentHTML('beforeend', `<tr><td><input type="text" class="outlay-name" value="Special Expense"></td><td><input type="number" class="outlay-age" value="70"></td><td><input type="number" class="outlay-amount" value="20000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`);
 }
 function addAccountRow() {
     const body = document.getElementById('accounts-body');
-    body.innerHTML += `<tr><td><input type="text" class="acc-name" value="Brokerage Sub-Account"></td><td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash/HYSA (Taxable)</option></select></td><td><input type="number" class="acc-balance" value="50000"></td><td><input type="number" class="acc-basis" value="50000"></td><td><input type="number" class="acc-return" step="0.01" value="0.06"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+    body.insertAdjacentHTML('beforeend', `<tr><td><input type="text" class="acc-name" value="Brokerage Sub-Account"></td><td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash/HYSA (Taxable)</option></select></td><td><input type="number" class="acc-balance" value="50000"></td><td><input type="number" class="acc-basis" value="50000"></td><td><input type="number" class="acc-return" step="0.01" value="0.06"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`);
 }
 
 let activeChartInstance = null;
@@ -558,8 +553,10 @@ function triggerPythonEngine() {
     if (window.run_simulation_isolated) { window.run_simulation_isolated(); }
 }
 
+// Complete local storage save/load logic implementations
 function getInputsSnapshot() {
-    const data = {
+    const collectValues = selector => Array.from(document.querySelectorAll(selector)).map(i => i.value);
+    return {
         global: {
             current_age: document.getElementById('current_age').value,
             retirement_age: document.getElementById('retirement_age').value,
@@ -570,67 +567,47 @@ function getInputsSnapshot() {
             state_tax_rate: document.getElementById('state_tax_rate').value,
             annual_savings_contribution: document.getElementById('annual_savings_contribution').value
         },
-        floors: [], conversions: [], outlays: [], accounts: []
+        floors: collectValues('.floor-name').map((_, i) => ({
+            name: collectValues('.floor-name')[i], start: collectValues('.floor-start')[i], end: collectValues('.floor-end')[i], amount: collectValues('.floor-amount')[i]
+        })),
+        conversions: collectValues('.conv-age').map((_, i) => ({
+            age: collectValues('.conv-age')[i], amount: collectValues('.conv-amount')[i]
+        })),
+        outlays: collectValues('.outlay-age').map((_, i) => ({
+            name: collectValues('.outlay-name')[i], age: collectValues('.outlay-age')[i], amount: collectValues('.outlay-amount')[i]
+        })),
+        accounts: collectValues('.acc-name').map((_, i) => ({
+            name: collectValues('.acc-name')[i], type: collectValues('.acc-type')[i], balance: collectValues('.acc-balance')[i], basis: collectValues('.acc-basis')[i], rate: collectValues('.acc-return')[i]
+        }))
     };
-    
-    document.querySelectorAll('#income-floor-body tr').forEach(tr => {
-        data.floors.push({
-            name: tr.querySelector('.floor-name').value, start: tr.querySelector('.floor-start').value,
-            end: tr.querySelector('.floor-end').value, amount: tr.querySelector('.floor-amount').value
-        });
-    });
-    document.querySelectorAll('#conversions-body tr').forEach(tr => {
-        data.conversions.push({ age: tr.querySelector('.conv-age').value, amount: tr.querySelector('.conv-amount').value });
-    });
-    document.querySelectorAll('#outlays-body tr').forEach(tr => {
-        data.outlays.push({
-            name: tr.querySelector('.outlay-name').value, age: tr.querySelector('.outlay-age').value, amount: tr.querySelector('.outlay-amount').value
-        });
-    });
-    document.querySelectorAll('#accounts-body tr').forEach(tr => {
-        data.accounts.push({
-            name: tr.querySelector('.acc-name').value, type: tr.querySelector('.acc-type').value,
-            balance: tr.querySelector('.acc-balance').value, basis: tr.querySelector('.acc-basis').value, rate: tr.querySelector('.acc-return').value
-        });
-    });
-    return JSON.stringify(data);
 }
 
 function saveToBrowserStorage() {
-    localStorage.setItem('retirement_engine_v9_matrix', getInputsSnapshot());
-    alert("Scenario properties successfully cached in local secure storage vector!");
+    localStorage.setItem('retirement_engine_scenario', JSON.stringify(getInputsSnapshot()));
+    alert("Scenario configuration successfully saved to browser local memory!");
 }
 
 function loadFromBrowserStorage() {
-    const raw = localStorage.getItem('retirement_engine_v9_matrix');
-    if(!raw) { alert("No saved matrix scenario found in browser storage!"); return; }
-    const data = JSON.parse(raw);
+    const backup = localStorage.getItem('retirement_engine_scenario');
+    if(!backup) return alert("No saved data configurations found in this browser context.");
+    const data = JSON.parse(backup);
     
-    document.getElementById('current_age').value = data.global.current_age;
-    document.getElementById('retirement_age').value = data.global.retirement_age;
-    document.getElementById('inflation_rate').value = data.global.inflation_rate;
-    document.getElementById('annual_spending').value = data.global.annual_spending;
-    document.getElementById('filing_status').value = data.global.filing_status;
-    document.getElementById('target_bracket').value = data.global.target_bracket;
-    document.getElementById('state_tax_rate').value = data.global.state_tax_rate || 4.5;
-    document.getElementById('annual_savings_contribution').value = data.global.annual_savings_contribution || 15000;
+    // Set globals
+    Object.keys(data.global).forEach(key => { if(document.getElementById(key)) document.getElementById(key).value = data.global[key]; });
+    
+    // Dynamic array parser macros
+    const rebuildTable = (bodyId, array, htmlBuilder) => {
+        const target = document.getElementById(bodyId);
+        target.innerHTML = '';
+        array.forEach(item => target.insertAdjacentHTML('beforeend', htmlBuilder(item)));
+    };
 
-    const floorBody = document.getElementById('income-floor-body'); floorBody.innerHTML = '';
-    data.floors.forEach(f => {
-        floorBody.innerHTML += `<tr><td><input type="text" class="floor-name" value="${f.name}"></td><td><input type="number" class="floor-start" value="${f.start}"></td><td><input type="number" class="floor-end" value="${f.end}"></td><td><input type="number" class="floor-amount" value="${f.amount}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
-    });
-    const convBody = document.getElementById('conversions-body'); convBody.innerHTML = '';
-    data.conversions.forEach(c => {
-        convBody.innerHTML += `<tr><td><input type="number" class="conv-age" value="${c.age}"></td><td><input type="number" class="conv-amount" value="${c.amount}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
-    });
-    const outlayBody = document.getElementById('outlays-body'); outlayBody.innerHTML = '';
-    data.outlays.forEach(o => {
-        outlayBody.innerHTML += `<tr><td><input type="text" class="outlay-name" value="${o.name}"></td><td><input type="number" class="outlay-age" value="${o.age}"></td><td><input type="number" class="outlay-amount" value="${o.amount}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
-    });
-    const accBody = document.getElementById('accounts-body'); accBody.innerHTML = '';
-    data.accounts.forEach(a => {
-        accBody.innerHTML += `<tr><td><input type="text" class="acc-name" value="${a.name}"></td><td><select class="acc-type"><option value="Traditional" ${a.type==='Traditional'?'selected':''}>Traditional (Pre-Tax)</option><option value="Roth" ${a.type==='Roth'?'selected':''}>Roth</option><option value="Brokerage" ${a.type==='Brokerage'?'selected':''}>Taxable Brokerage</option><option value="Cash" ${a.type==='Cash'?'selected':''}>Cash/HYSA (Taxable)</option></select></td><td><input type="number" class="acc-balance" value="${a.balance}"></td><td><input type="number" class="acc-basis" value="${a.basis}"></td><td><input type="number" class="acc-return" step="0.01" value="${a.rate}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
-    });
+    rebuildTable('income-floor-body', data.floors, f => `<tr><td><input type="text" class="floor-name" value="${f.name}"></td><td><input type="number" class="floor-start" value="${f.start}"></td><td><input type="number" class="floor-end" value="${f.end}"></td><td><input type="number" class="floor-amount" value="${f.amount}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`);
+    rebuildTable('conversions-body', data.conversions, c => `<tr><td><input type="number" class="conv-age" value="${c.age}"></td><td><input type="number" class="conv-amount" value="${c.amount}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`);
+    rebuildTable('outlays-body', data.outlays, o => `<tr><td><input type="text" class="outlay-name" value="${o.name}"></td><td><input type="number" class="outlay-age" value="${o.age}"></td><td><input type="number" class="outlay-amount" value="${o.amount}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`);
+    rebuildTable('accounts-body', data.accounts, a => `<tr><td><input type="text" class="acc-name" value="${a.name}"></td><td><select class="acc-type"><option value="Traditional" ${a.type==='Traditional'?'selected':''}>Traditional (Pre-Tax)</option><option value="Roth" ${a.type==='Roth'?'selected':''}>Roth</option><option value="Brokerage" ${a.type==='Brokerage'?'selected':''}>Taxable Brokerage</option><option value="Cash" ${a.type==='Cash'?'selected':''}>Cash/HYSA (Taxable)</option></select></td><td><input type="number" class="acc-balance" value="${a.balance}"></td><td><input type="number" class="acc-basis" value="${a.basis}"></td><td><input type="number" class="acc-return" step="0.01" value="${a.rate}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`);
+    
+    alert("Scenario data variables synchronized and populated successfully.");
 }
 </script>
 </body>
