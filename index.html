@@ -174,18 +174,18 @@
                 <th colspan="2" class="section-demand">Cash Requirements</th>
                 <th colspan="4" class="section-sources">All Funding Sources (Must Equal Cash Demand)</th>
                 <th colspan="4" class="section-balances">Year-End Portfolio Balances (After Growth)</th>
-                <th colspan="4" class="section-metrics">Tax, Conversion, & AGI Ledger Mapping</th>
+                <th colspan="5" class="section-metrics">Tax, Conversion, & Explicit AGI Source Ledger</th>
             </tr>
             <tr>
                 <th>Yr</th><th>Age</th>
                 <th class="section-demand">Cash Demand</th><th class="section-demand">Deficit After Floor</th>
                 <th class="section-sources">Base Revenue (Floor+RMD)</th><th class="section-sources">From Taxable Cash</th><th class="section-sources">From Brokerage</th><th class="section-sources">From Pre/Post Port</th>
                 <th class="section-balances">Cash/HYSA</th><th class="section-balances">Brokerage</th><th class="section-balances">Pre-Tax Trad</th><th class="section-balances">Post-Tax Roth</th>
-                <th class="section-metrics">Calculated RMD</th><th class="section-metrics">Roth Conv. Made</th><th class="section-metrics">Total AGI</th><th class="section-metrics">Tax Paid (Eff. Rate)</th>
+                <th class="section-metrics">Calculated RMD</th><th class="section-metrics">Roth Conv. Made</th><th class="section-metrics">Income AGI (Floor, RMD, Yield, Conv)</th><th class="section-metrics">CapGains AGI (Sales Only)</th><th class="section-metrics">Tax Paid (Eff. Rate)</th>
             </tr>
         </thead>
         <tbody id="results-body">
-            <tr><td colspan="16" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
+            <tr><td colspan="17" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
         </tbody>
     </table>
 </div>
@@ -322,6 +322,14 @@ def run_simulation_isolated():
             sourced_from_portfolio_remainder = 0.0
             total_conversions_this_year = 0.0
 
+            # Pre-calculate internal taxable growth yield (40% of standard return on taxable cash/brokerage hits AGI annually)
+            taxable_yield_income = 0.0
+            for acc in accounts:
+                if acc['type'] in ['Cash', 'Brokerage'] and acc['balance'] > 0:
+                    taxable_yield_income += (acc['balance'] * acc['rate'] * 0.40)
+            
+            ordinary_income_flow += taxable_yield_income
+
             rem_rmd = rmd_requirement
             for acc in accounts:
                 if acc['type'] == 'Traditional' and acc['balance'] > 0:
@@ -419,6 +427,7 @@ def run_simulation_isolated():
                         acc['balance'] -= pull
                         rem_tax -= pull
 
+            # Process final internal portfolio compounding yield
             for acc in accounts:
                 if acc['balance'] > 0:
                     growth = acc['balance'] * acc['rate']
@@ -450,7 +459,8 @@ def run_simulation_isolated():
                     <td class='section-balances' style='color:#16a34a; font-weight:600;'>${end_posttax:,.0f}</td>
                     <td class='section-metrics' style='color:#7c3aed;'>${rmd_requirement:,.0f}</td>
                     <td class='section-metrics' style='color:#2563eb; font-weight:600;'>${total_conversions_this_year:,.0f}</td>
-                    <td class='section-metrics' style='font-weight:700; color:#0f172a;'>${calculated_agi:,.0f}</td>
+                    <td class='section-metrics' style='color:#0f172a; font-weight:600;'>${ordinary_income_flow:,.0f}</td>
+                    <td class='section-metrics' style='color:#16a34a; font-weight:600;'>${capital_gains_realized:,.0f}</td>
                     <td><span style='color:#dc2626; font-weight:600;'>${total_tax_bill:,.0f}</span> ({effective_tax_rate:.1f}%)</td>
                 </tr>
             """)
@@ -464,7 +474,6 @@ window.run_simulation_isolated = run_simulation_isolated
 </script>
 
 <script>
-// Browser LocalStorage Interface Serialization Helpers
 function getInputsSnapshot() {
     const data = {
         global: {
