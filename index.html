@@ -22,6 +22,8 @@
         .btn:hover { background: #1d4ed8; }
         .btn-secondary { background: #475569; }
         .btn-secondary:hover { background: #334155; }
+        .btn-success { background: #16a34a; }
+        .btn-success:hover { background: #15803d; }
         #chart-wrapper { width: 100%; height: 350px; margin: 25px 0; }
         
         /* Multi-Column Highlight Sections */
@@ -37,6 +39,11 @@
 <div class="container">
     <h2>Retirement Engine v8 (Dynamic Asset Liquidation Ledger)</h2>
     
+    <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+        <button class="btn btn-success" onclick="saveToBrowserStorage()">💾 Save Inputs & Scenario</button>
+        <button class="btn btn-secondary" onclick="loadFromBrowserStorage()">📂 Reload Saved Scenario</button>
+    </div>
+
     <h3>Global Parameters & Policy Settings</h3>
     <div class="grid-inputs">
         <div class="input-group"><label>Current Age</label><input type="number" id="current_age" value="62"></div>
@@ -167,18 +174,18 @@
                 <th colspan="2" class="section-demand">Cash Requirements</th>
                 <th colspan="4" class="section-sources">All Funding Sources (Must Equal Cash Demand)</th>
                 <th colspan="4" class="section-balances">Year-End Portfolio Balances (After Growth)</th>
-                <th colspan="3" class="section-metrics">Tax & Conversion Metrics</th>
+                <th colspan="4" class="section-metrics">Tax, Conversion, & AGI Ledger Mapping</th>
             </tr>
             <tr>
                 <th>Yr</th><th>Age</th>
                 <th class="section-demand">Cash Demand</th><th class="section-demand">Deficit After Floor</th>
                 <th class="section-sources">Base Revenue (Floor+RMD)</th><th class="section-sources">From Taxable Cash</th><th class="section-sources">From Brokerage</th><th class="section-sources">From Pre/Post Port</th>
                 <th class="section-balances">Cash/HYSA</th><th class="section-balances">Brokerage</th><th class="section-balances">Pre-Tax Trad</th><th class="section-balances">Post-Tax Roth</th>
-                <th class="section-metrics">Calculated RMD</th><th class="section-metrics">Roth Conv. Made</th><th class="section-metrics">AGI / Tax Paid</th>
+                <th class="section-metrics">Calculated RMD</th><th class="section-metrics">Roth Conv. Made</th><th class="section-metrics">Total AGI</th><th class="section-metrics">Tax Paid (Eff. Rate)</th>
             </tr>
         </thead>
         <tbody id="results-body">
-            <tr><td colspan="15" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
+            <tr><td colspan="16" style="text-align:center; color:#64748b;">Click "Execute Matrix Simulation Model" to run the Python engine.</td></tr>
         </tbody>
     </table>
 </div>
@@ -210,7 +217,6 @@ def get_bracket_max_income(status, target_rate):
             limit_taxable = limit
             break
     if limit_taxable == float('inf') or limit_taxable == 0.0:
-        # Prevent zero thresholds or inf issues by defaulting safely based on target
         if abs(target_rate - 0.12) < 0.01: limit_taxable = 94300.0 if status == 'MFJ' else 47150.0
         elif abs(target_rate - 0.22) < 0.01: limit_taxable = 201050.0 if status == 'MFJ' else 100525.0
         elif abs(target_rate - 0.24) < 0.01: limit_taxable = 383900.0 if status == 'MFJ' else 191950.0
@@ -307,9 +313,7 @@ def run_simulation_isolated():
             rmd_divisor = (27.4 - (age - 73)) if age >= 73 else 0
             rmd_requirement = (trad_total / rmd_divisor) if rmd_divisor > 0 else 0
 
-            # Base automatic revenue generated this year before touching strategic liquidations
             base_revenue_flow = current_year_floor + rmd_requirement
-            
             ordinary_income_flow = current_year_floor + rmd_requirement
             capital_gains_realized = 0
             
@@ -318,7 +322,6 @@ def run_simulation_isolated():
             sourced_from_portfolio_remainder = 0.0
             total_conversions_this_year = 0.0
 
-            # Drain RMD first from accounts
             rem_rmd = rmd_requirement
             for acc in accounts:
                 if acc['type'] == 'Traditional' and acc['balance'] > 0:
@@ -326,7 +329,6 @@ def run_simulation_isolated():
                     acc['balance'] -= withdrawn
                     rem_rmd -= withdrawn
 
-            # Calculate actual remaining deficit to cover cash demand
             net_deficit_after_forced = max(0, realized_cash_demand - base_revenue_flow)
             remaining_net_cash_needed = net_deficit_after_forced
 
@@ -364,7 +366,6 @@ def run_simulation_isolated():
                         acc['balance'] -= pull
                         remaining_net_cash_needed -= pull
 
-            # Run strategic bracket mapping logic
             max_income_allowed = get_bracket_max_income(filing_status, target_bracket_rate)
             available_bracket_room = max(0.0, max_income_allowed - ordinary_income_flow)
             
@@ -406,6 +407,8 @@ def run_simulation_isolated():
             ordinary_tax = calculate_progressive_tax(ordinary_income_flow, filing_status)
             capital_gains_tax = capital_gains_realized * 0.15
             total_tax_bill = ordinary_tax + capital_gains_tax
+            
+            effective_tax_rate = (total_tax_bill / calculated_agi * 100) if calculated_agi > 0 else 0.0
 
             rem_tax = total_tax_bill
             for wrapper_pref in ['Cash', 'Brokerage', 'Roth']:
@@ -447,7 +450,8 @@ def run_simulation_isolated():
                     <td class='section-balances' style='color:#16a34a; font-weight:600;'>${end_posttax:,.0f}</td>
                     <td class='section-metrics' style='color:#7c3aed;'>${rmd_requirement:,.0f}</td>
                     <td class='section-metrics' style='color:#2563eb; font-weight:600;'>${total_conversions_this_year:,.0f}</td>
-                    <td><span style='font-weight:600;'>${calculated_agi:,.0f}</span> / <span style='color:#dc2626;'>${total_tax_bill:,.0f}</span></td>
+                    <td class='section-metrics' style='font-weight:700; color:#0f172a;'>${calculated_agi:,.0f}</td>
+                    <td><span style='color:#dc2626; font-weight:600;'>${total_tax_bill:,.0f}</span> ({effective_tax_rate:.1f}%)</td>
                 </tr>
             """)
 
@@ -460,53 +464,101 @@ window.run_simulation_isolated = run_simulation_isolated
 </script>
 
 <script>
+// Browser LocalStorage Interface Serialization Helpers
+function getInputsSnapshot() {
+    const data = {
+        global: {
+            current_age: document.getElementById('current_age').value,
+            retirement_age: document.getElementById('retirement_age').value,
+            inflation_rate: document.getElementById('inflation_rate').value,
+            annual_spending: document.getElementById('annual_spending').value,
+            filing_status: document.getElementById('filing_status').value,
+            target_bracket: document.getElementById('target_bracket').value
+        },
+        floors: [], conversions: [], outlays: [], accounts: []
+    };
+    
+    document.querySelectorAll('#income-floor-body tr').forEach(tr => {
+        data.floors.push({
+            name: tr.querySelector('.floor-name').value, start: tr.querySelector('.floor-start').value,
+            end: tr.querySelector('.floor-end').value, amount: tr.querySelector('.floor-amount').value
+        });
+    });
+    document.querySelectorAll('#conversions-body tr').forEach(tr => {
+        data.conversions.push({ age: tr.querySelector('.conv-age').value, amount: tr.querySelector('.conv-amount').value });
+    });
+    document.querySelectorAll('#outlays-body tr').forEach(tr => {
+        data.outlays.push({
+            name: tr.querySelector('.outlay-name').value, age: tr.querySelector('.outlay-age').value, amount: tr.querySelector('.outlay-amount').value
+        });
+    });
+    document.querySelectorAll('#accounts-body tr').forEach(tr => {
+        data.accounts.push({
+            name: tr.querySelector('.acc-name').value, type: tr.querySelector('.acc-type').value,
+            balance: tr.querySelector('.acc-balance').value, basis: tr.querySelector('.acc-basis').value, rate: tr.querySelector('.acc-return').value
+        });
+    });
+    return JSON.stringify(data);
+}
+
+function saveToBrowserStorage() {
+    localStorage.setItem('retirement_engine_v8_matrix', getInputsSnapshot());
+    alert("Scenario properties successfully cached in local secure storage vector!");
+}
+
+function loadFromBrowserStorage() {
+    const raw = localStorage.getItem('retirement_engine_v8_matrix');
+    if(!raw) { alert("No saved matrix scenario found in browser storage!"); return; }
+    const data = JSON.parse(raw);
+    
+    document.getElementById('current_age').value = data.global.current_age;
+    document.getElementById('retirement_age').value = data.global.retirement_age;
+    document.getElementById('inflation_rate').value = data.global.inflation_rate;
+    document.getElementById('annual_spending').value = data.global.annual_spending;
+    document.getElementById('filing_status').value = data.global.filing_status;
+    document.getElementById('target_bracket').value = data.global.target_bracket;
+
+    const floorBody = document.getElementById('income-floor-body'); floorBody.innerHTML = '';
+    data.floors.forEach(f => {
+        floorBody.innerHTML += `<tr><td><input type="text" class="floor-name" value="${f.name}"></td><td><input type="number" class="floor-start" value="${f.start}"></td><td><input type="number" class="floor-end" value="${f.end}"></td><td><input type="number" class="floor-amount" value="${f.amount}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+    });
+    const convBody = document.getElementById('conversions-body'); convBody.innerHTML = '';
+    data.conversions.forEach(c => {
+        convBody.innerHTML += `<tr><td><input type="number" class="conv-age" value="${c.age}"></td><td><input type="number" class="conv-amount" value="${c.amount}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+    });
+    const outlayBody = document.getElementById('outlays-body'); outlayBody.innerHTML = '';
+    data.outlays.forEach(o => {
+        outlayBody.innerHTML += `<tr><td><input type="text" class="outlay-name" value="${o.name}"></td><td><input type="number" class="outlay-age" value="${o.age}"></td><td><input type="number" class="outlay-amount" value="${o.amount}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+    });
+    const accBody = document.getElementById('accounts-body'); accBody.innerHTML = '';
+    data.accounts.forEach(a => {
+        accBody.innerHTML += `<tr><td><input type="text" class="acc-name" value="${a.name}"></td><td><select class="acc-type"><option value="Traditional" ${a.type==='Traditional'?'selected':''}>Traditional (Pre-Tax)</option><option value="Roth" ${a.type==='Roth'?'selected':''}>Roth</option><option value="Brokerage" ${a.type==='Brokerage'?'selected':''}>Taxable Brokerage</option><option value="Cash" ${a.type==='Cash'?'selected':''}>Cash/HYSA (Taxable)</option></select></td><td><input type="number" class="acc-balance" value="${a.balance}"></td><td><input type="number" class="acc-basis" value="${a.basis}"></td><td><input type="number" class="acc-return" step="0.01" value="${a.rate}"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td></tr>`;
+    });
+    alert("Scenario attributes reloaded! Click 'Execute Matrix Simulation Model' to recalculate.");
+}
+
 function addFloorRow() {
     const tbody = document.getElementById('income-floor-body');
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-        <td><input type="text" class="floor-name" value="Supplemental Income Stream"></td>
-        <td><input type="number" class="floor-start" value="65"></td>
-        <td><input type="number" class="floor-end" value="100"></td>
-        <td><input type="number" class="floor-amount" value="10000"></td>
-        <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
-    `;
+    tr.innerHTML = `<td><input type="text" class="floor-name" value="Supplemental Income Stream"></td><td><input type="number" class="floor-start" value="65"></td><td><input type="number" class="floor-end" value="100"></td><td><input type="number" class="floor-amount" value="10000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>`;
     tbody.appendChild(tr);
 }
-
 function addConversionRow() {
     const tbody = document.getElementById('conversions-body');
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-        <td><input type="number" class="conv-age" value="65"></td>
-        <td><input type="number" class="conv-amount" value="40000"></td>
-        <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
-    `;
+    tr.innerHTML = `<td><input type="number" class="conv-age" value="65"></td><td><input type="number" class="conv-amount" value="40000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>`;
     tbody.appendChild(tr);
 }
-
 function addOutlayRow() {
     const tbody = document.getElementById('outlays-body');
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-        <td><input type="text" class="outlay-name" value="Capital Expense Event"></td>
-        <td><input type="number" class="outlay-age" value="72"></td>
-        <td><input type="number" class="outlay-amount" value="30000"></td>
-        <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
-    `;
+    tr.innerHTML = `<td><input type="text" class="outlay-name" value="Capital Expense Event"></td><td><input type="number" class="outlay-age" value="72"></td><td><input type="number" class="outlay-amount" value="30000"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>`;
     tbody.appendChild(tr);
 }
-
 function addAccountRow() {
     const tbody = document.getElementById('accounts-body');
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-        <td><input type="text" class="acc-name" value="Supplemental Account"></td>
-        <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash" selected>Cash/HYSA (Taxable)</option></select></td>
-        <td><input type="number" class="acc-balance" value="25000"></td>
-        <td><input type="number" class="acc-basis" value="25000"></td>
-        <td><input type="number" class="acc-return" step="0.01" value="0.04"></td>
-        <td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>
-    `;
+    tr.innerHTML = `<td><input type="text" class="acc-name" value="Supplemental Account"></td><td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash" selected>Cash/HYSA (Taxable)</option></select></td><td><input type="number" class="acc-balance" value="25000"></td><td><input type="number" class="acc-basis" value="25000"></td><td><input type="number" class="acc-return" step="0.01" value="0.04"></td><td><button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">Remove</button></td>`;
     tbody.appendChild(tr);
 }
 
