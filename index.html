@@ -216,7 +216,8 @@ def calculate_progressive_tax(income, status):
     if taxable_income <= 0: return 0
     tax = 0
     previous_limit = 0
-    for limit, rate in brackets := TAX_BRACKETS[status]:
+    brackets = TAX_BRACKETS[status]
+    for limit, rate in brackets:
         if taxable_income > limit:
             tax += (limit - previous_limit) * rate
             previous_limit = limit
