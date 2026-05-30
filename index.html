@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retirement Matrix v21 - Pre-Tax Dispersal Engine</title>
+    <title>Retirement Matrix v22 - Fixed Pre-Tax Dispersal Engine</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -33,7 +33,7 @@
 
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; background: #1e3a8a; color: white; padding: 6px 12px; border-radius: 4px;">
-        <span style="font-weight: bold; font-size: 1rem;">Retirement Matrix v21 [Pre-Tax To Zero Strategy Console]</span>
+        <span style="font-weight: bold; font-size: 1rem;">Retirement Matrix v22 [Fixed Pre-Tax To Zero Strategy Console]</span>
         <div style="display: flex; gap: 6px;">
             <button class="btn" style="background:#0ea5e9;" onclick="saveToBrowserStorage()">💾 Save Config</button>
             <button class="btn" style="background:#64748b;" onclick="loadFromBrowserStorage()">📂 Load Config</button>
@@ -41,7 +41,7 @@
     </div>
 
     <div id="optimizer-diagnostic-panel" class="diagnostic-card" style="margin-top: 6px;">
-        📊 Configure parameters and invoke execution to map the Pre-Tax liquidation curve.
+        📊 Forcing aggressive, bracket-topping Roth conversions before any living expense draws are calculated.
     </div>
 
     <h3>1. System Controls & Targets</h3>
@@ -58,7 +58,7 @@
         <div class="input-group"><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.005" value="0.025"></div>
         <div class="input-group"><label>Base Living Cost Today ($)</label><input type="number" id="annual_spending" value="85000"></div>
         <div class="input-group">
-            <label>Conversion Bracket Ceiling</label>
+            <label>Forced Conversion Bracket</label>
             <select id="target_bracket">
                 <option value="0.12" selected>Top of 12% / 15% Bracket</option>
                 <option value="0.22">Top of 22% / 25% Bracket</option>
@@ -68,10 +68,10 @@
         </div>
         <div class="input-group"><label>Filing Status</label><select id="filing_status"><option value="MFJ" selected>MFJ</option><option value="Single">Single</option></select></div>
         <div class="input-group">
-            <label>2026 Tax Law Rules</label>
+            <label>Tax Law Policy</label>
             <select id="tax_regime_mode">
-                <option value="SUNSET" selected>⚠️ Apply TCJA Reverted Higher Rates</option>
-                <option value="EXTENDED">Maintain Legacy Lower Rates</option>
+                <option value="SUNSET" selected>⚠️ Revert to Higher Rates (2026+)</option>
+                <option value="EXTENDED">Keep Current Lower Rates</option>
             </select>
         </div>
         <div class="input-group"><label>Combined State Tax (%)</label><input type="number" id="state_tax_rate" step="0.1" value="4.0"></div>
@@ -170,9 +170,9 @@
             <tr>
                 <th>Yr</th><th>Age</th>
                 <th class="section-demand">Budget Need</th><th class="section-demand">Deficit</th>
-                <th class="section-sources">Fixed Floors</th><th class="section-sources">1. Mandatory Pre-Tax Dispersal</th><th class="section-sources">2. Brokerage (0% CapGains)</th><th class="section-sources">3. Roth Cushion</th><th class="section-sources">Outside Tax Escrow Pool</th>
+                <th class="section-sources">Fixed Floors</th><th class="section-sources">1. Pre-Tax Base Draw</th><th class="section-sources">2. Brokerage Draw</th><th class="section-sources">3. Roth Draw</th><th class="section-sources">Outside Tax Paid</th>
                 <th class="section-balances">Cash Balance</th><th class="section-balances">Brokerage</th><th class="section-balances">Pre-Tax Bal</th><th class="section-balances">Roth Balance</th>
-                <th class="section-metrics">RMD Hit</th><th class="section-metrics">Executed Conv.</th><th class="section-metrics">Total AGI</th><th class="section-metrics">Calculated Tax Bill</th><th class="section-metrics">IRMAA Risk</th>
+                <th class="section-metrics">RMD Hit</th><th class="section-metrics">Forced Conv.</th><th class="section-metrics">Total AGI</th><th class="section-metrics">Total Taxes</th><th class="section-metrics">IRMAA Risk</th>
             </tr>
         </thead>
         <tbody id="results-body">
@@ -186,14 +186,14 @@ import json
 import random
 from pyscript import document, window
 
-# 2026 Reverted Post-Sunset Parameters
+# 2026 Reverted Higher Rates Structure
 BRACKETS_REVERTED = {
     'Single': [(10000, 0.10), (40000, 0.15), (95000, 0.25), (200000, 0.28), (430000, 0.33), (float('inf'), 0.396)],
     'MFJ': [(20000, 0.10), (80000, 0.15), (160000, 0.25), (250000, 0.28), (450000, 0.33), (float('inf'), 0.396)]
 }
 DEDUCTION_REVERTED = {'Single': 8500, 'MFJ': 17000}
 
-# 2026 Indexed Extension Parameters
+# 2026 Indexed Extension Structure
 BRACKETS_CURRENT = {
     'Single': [(12400, 0.10), (50400, 0.12), (105700, 0.22), (201775, 0.24), (256225, 0.32), (640600, 0.35), (float('inf'), 0.37)],
     'MFJ': [(24800, 0.10), (100800, 0.12), (211400, 0.22), (403550, 0.24), (512450, 0.32), (768700, 0.35), (float('inf'), 0.37)]
@@ -255,10 +255,10 @@ def run_isolated_scenario(target_bracket_input, cur_age, ret_age, inflation, spe
         brackets = BRACKETS_REVERTED[filing_status] if force_sunset else BRACKETS_CURRENT[filing_status]
         deduction = DEDUCTION_REVERTED[filing_status] if force_sunset else DEDUCTION_CURRENT[filing_status]
         
-        # Determine ceiling of target conversion bracket
+        # Calculate maximum ordinary gross income ceiling allowed based on selected bracket
         max_ordinary_allowed = deduction
         if target_bracket_input == "MAX_FAST":
-            max_ordinary_allowed = float('inf')
+            max_ordinary_allowed = 9999999.0
         else:
             target_rate = float(target_bracket_input)
             for limit, rate in brackets:
@@ -271,12 +271,13 @@ def run_isolated_scenario(target_bracket_input, cur_age, ret_age, inflation, spe
         shock_need = 0.0
         for idx, o_age in enumerate(o_ages):
             if o_age == age:
-                shock_need += o_amts[idx] * ((1 + inflation) ** (yr - 1))
+                if o_types[idx] == "Outlay":
+                    shock_need += o_amts[idx] * ((1 + inflation) ** (yr - 1))
 
         realized_cash_demand = base_need + shock_need
         fixed_floor_inflows = sum(f_amounts[i] * ((1 + inflation) ** (yr - 1)) for i in range(len(f_names)) if f_starts[i] <= age <= f_ends[i])
 
-        # Track total Pre-Tax balance for RMD checks
+        # Mandatory RMD Verification
         pretax_aggregate = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
         if pretax_aggregate <= 0:
             rmd_req = 0.0
@@ -284,10 +285,11 @@ def run_isolated_scenario(target_bracket_input, cur_age, ret_age, inflation, spe
             divisor = (27.4 - (age - 73)) if age >= 73 else 0
             rmd_req = (pretax_aggregate / divisor) if divisor > 0 else 0.0
 
-        # Satisfy base floors and mandatory RMDs
+        # Establish baseline ordinary income before choice draws or active conversions
         ordinary_income_flow = fixed_floor_inflows + rmd_req
         capital_gains_realized = 0.0
 
+        # Subtract standard required RMD from assets
         rem_rmd = rmd_req
         for acc in accounts:
             if acc['type'] == 'Traditional' and acc['balance'] > 0:
@@ -295,88 +297,14 @@ def run_isolated_scenario(target_bracket_input, cur_age, ret_age, inflation, spe
                 acc['balance'] -= draw
                 rem_rmd -= draw
 
-        net_deficit = max(0.0, realized_cash_demand - (fixed_floor_inflows + rmd_req))
-        rem_cash_needed = net_deficit
-        
-        sourced_pretax = 0.0
-        sourced_brokerage = 0.0
-        sourced_roth = 0.0
-        sourced_tax_escrow = 0.0
-
-        # Mandated Pre-Tax Bracket Sourcing Cascade
-        if age >= ret_age and rem_cash_needed > 0:
-            available_space = max(0.0, max_ordinary_allowed - ordinary_income_flow)
-            if available_space > 0:
-                for acc in accounts:
-                    if acc['type'] == 'Traditional' and acc['balance'] > 0 and available_space > 0:
-                        pull = min([rem_cash_needed, acc['balance'], available_space])
-                        ordinary_income_flow += pull
-                        available_space -= pull
-                        sourced_pretax += pull
-                        acc['balance'] -= pull
-                        rem_cash_needed -= pull
-
-            # Top off with Brokerage inside 0% Capital Gains window
-            if rem_cash_needed > 0:
-                cg_limit = 80000 if force_sunset else 98900
-                if filing_status == 'Single': cg_limit = 40000 if force_sunset else 49450
-                taxable_ord = max(0.0, ordinary_income_flow - deduction)
-                remaining_cg_space = max(0.0, cg_limit - taxable_ord)
-                
-                for acc in accounts:
-                    if acc['type'] == 'Brokerage' and acc['balance'] > 0 and remaining_cg_space > 0:
-                        gain_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
-                        max_with = remaining_cg_space / gain_ratio if gain_ratio > 0 else rem_cash_needed
-                        allowed = min([rem_cash_needed, acc['balance'], max_with])
-                        
-                        capital_gains_realized += allowed * gain_ratio
-                        remaining_cg_space -= allowed * gain_ratio
-                        sourced_brokerage += allowed
-                        acc['basis'] -= (allowed * (1.0 - gain_ratio))
-                        acc['balance'] -= allowed
-                        rem_cash_needed -= allowed
-
-            # Fund remaining budget shortfall from Roth
-            if rem_cash_needed > 0:
-                for acc in accounts:
-                    if acc['type'] == 'Roth' and acc['balance'] > 0:
-                        pull = min(rem_cash_needed, acc['balance'])
-                        sourced_roth += pull
-                        acc['balance'] -= pull
-                        rem_cash_needed -= pull
-
-            # Fallback to cash pool
-            if rem_cash_needed > 0:
-                for acc in accounts:
-                    if acc['type'] == 'Cash' and acc['balance'] > 0:
-                        pull = min(rem_cash_needed, acc['balance'])
-                        sourced_tax_escrow += pull
-                        acc['balance'] -= pull
-                        rem_cash_needed -= pull
-
-        # Solvency overflow catch-all
-        if rem_cash_needed > 0:
-            for wrap in ['Traditional', 'Brokerage', 'Roth']:
-                if rem_cash_needed <= 0: break
-                for acc in accounts:
-                    if acc['type'] == wrap and acc['balance'] > 0:
-                        pull = min(rem_cash_needed, acc['balance'])
-                        if wrap == 'Traditional': ordinary_income_flow += pull
-                        elif wrap == 'Brokerage':
-                            gr = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
-                            capital_gains_realized += pull * gr
-                            acc['basis'] -= (pull * (1.0 - gr))
-                        acc['balance'] -= pull
-                        rem_cash_needed -= pull
-
-        # AGGRESSIVE ROTH CONVERSIONS TO DISPERSE PRE-TAX BUCKET
+        # CRITICAL FIX: FORCE BRACKET-TOPPING CONVERSIONS FIRST PRIOR TO EXPENSE LIQUIDATION
         total_conv_executed = 0.0
         current_pretax_rem = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
         
         if current_pretax_rem > 0:
             conversion_headroom = max(0.0, max_ordinary_allowed - ordinary_income_flow)
             if target_bracket_input == "MAX_FAST":
-                conversion_headroom = current_pretax_rem # Convert entire remaining Pre-Tax balance immediately
+                conversion_headroom = current_pretax_rem
                 
             if conversion_headroom > 0:
                 exec_amt = min(conversion_headroom, current_pretax_rem)
@@ -395,13 +323,90 @@ def run_isolated_scenario(target_bracket_input, cur_age, ret_age, inflation, spe
                         acc['balance'] += exec_amt
                         break
 
-        # Calculate exact tax liabilities
+        # Calculate exact cash shortfalls to maintain retirement lifestyle budget
+        net_deficit = max(0.0, realized_cash_demand - (fixed_floor_inflows + rmd_req))
+        rem_cash_needed = net_deficit
+        
+        sourced_pretax = 0.0
+        sourced_brokerage = 0.0
+        sourced_roth = 0.0
+        sourced_tax_escrow = 0.0
+
+        # Fund lifestyle from retirement accounts (Pre-Tax first up to structural limits, then Brokerage, then Roth)
+        if age >= ret_age and rem_cash_needed > 0:
+            # Step A: Pre-Tax Standard Cash Withdrawal if headroom exists
+            available_space = max(0.0, max_ordinary_allowed - ordinary_income_flow)
+            if available_space > 0:
+                for acc in accounts:
+                    if acc['type'] == 'Traditional' and acc['balance'] > 0 and available_space > 0:
+                        pull = min([rem_cash_needed, acc['balance'], available_space])
+                        ordinary_income_flow += pull
+                        available_space -= pull
+                        sourced_pretax += pull
+                        acc['balance'] -= pull
+                        rem_cash_needed -= pull
+
+            # Step B: Brokerage Sourcing (utilizing 0% Capital Gains Shield bounds)
+            if rem_cash_needed > 0:
+                cg_limit = 80000 if force_sunset else 98900
+                if filing_status == 'Single': cg_limit = 40000 if force_sunset else 49450
+                taxable_ord = max(0.0, ordinary_income_flow - deduction)
+                remaining_cg_space = max(0.0, cg_limit - taxable_ord)
+                
+                for acc in accounts:
+                    if acc['type'] == 'Brokerage' and acc['balance'] > 0:
+                        gain_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
+                        max_with = remaining_cg_space / gain_ratio if (gain_ratio > 0 and remaining_cg_space > 0) else rem_cash_needed
+                        allowed = min([rem_cash_needed, acc['balance'], max_with])
+                        
+                        capital_gains_realized += allowed * gain_ratio
+                        if remaining_cg_space > 0:
+                            remaining_cg_space -= allowed * gain_ratio
+                        sourced_brokerage += allowed
+                        acc['basis'] -= (allowed * (1.0 - gain_ratio))
+                        acc['balance'] -= allowed
+                        rem_cash_needed -= allowed
+
+            # Step C: Roth Core Draws
+            if rem_cash_needed > 0:
+                for acc in accounts:
+                    if acc['type'] == 'Roth' and acc['balance'] > 0:
+                        pull = min(rem_cash_needed, acc['balance'])
+                        sourced_roth += pull
+                        acc['balance'] -= pull
+                        rem_cash_needed -= pull
+
+            # Step D: Outside Cash Buffer Drainage
+            if rem_cash_needed > 0:
+                for acc in accounts:
+                    if acc['type'] == 'Cash' and acc['balance'] > 0:
+                        pull = min(rem_cash_needed, acc['balance'])
+                        sourced_tax_escrow += pull
+                        acc['balance'] -= pull
+                        rem_cash_needed -= pull
+
+        # Direct solvency override catchall if limits are saturated
+        if rem_cash_needed > 0:
+            for wrap in ['Traditional', 'Brokerage', 'Roth']:
+                if rem_cash_needed <= 0: break
+                for acc in accounts:
+                    if acc['type'] == wrap and acc['balance'] > 0:
+                        pull = min(rem_cash_needed, acc['balance'])
+                        if wrap == 'Traditional': ordinary_income_flow += pull
+                        elif wrap == 'Brokerage':
+                            gr = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
+                            capital_gains_realized += pull * gr
+                            acc['basis'] -= (pull * (1.0 - gr))
+                        acc['balance'] -= pull
+                        rem_cash_needed -= pull
+
+        # Tax calculations
         agi_calculated = ordinary_income_flow + capital_gains_realized
         fed_tax_bill = compute_tax_liability(ordinary_income_flow, capital_gains_realized, filing_status, force_sunset)
         state_tax_bill = agi_calculated * state_tax_rate
         total_tax_bill = fed_tax_bill + state_tax_bill
         
-        # Fund the tax bill from Cash or Brokerage escrow (preserving the Roth)
+        # Deduct taxes from non-Roth assets to avoid diminishing Roth compounds
         rem_tax_to_pay = total_tax_bill
         total_lifetime_taxes += total_tax_bill
         
@@ -413,7 +418,7 @@ def run_isolated_scenario(target_bracket_input, cur_age, ret_age, inflation, spe
                     acc['balance'] -= tax_pull
                     rem_tax_to_pay -= tax_pull
 
-        # Run growth engine iterations
+        # Annual market return calculations
         for acc in accounts:
             if acc['balance'] > 0:
                 if is_stochastic:
@@ -503,10 +508,10 @@ def execute_simulation_matrix():
                         <td class='section-demand'>${row['realized_cash_demand']/1000:,.1f}k</td>
                         <td class='section-demand' style='color:#0284c7;'>${row['net_deficit']/1000:,.1f}k</td>
                         <td class='section-sources'>${row['fixed_floor_inflows']/1000:,.1f}k</td>
-                        <td class='section-sources' style='color:#b45309; font-weight:600;'>${row['sourced_pretax']/1000:,.1f}k</td>
+                        <td class='section-sources' style='color:#b45309;'>${row['sourced_pretax']/1000:,.1f}k</td>
                         <td class='section-sources' style='color:#0284c7;'>${row['sourced_brokerage']/1000:,.1f}k</td>
-                        <td class='section-sources' style='color:#16a34a; font-weight:bold;'>${row['sourced_roth']/1000:,.1f}k</td>
-                        <td class='section-sources'>${row['sourced_tax_escrow']/1000:,.1f}k</td>
+                        <td class='section-sources' style='color:#16a34a;'>${row['sourced_roth']/1000:,.1f}k</td>
+                        <td class='section-sources' style='font-weight:bold;'>${row['sourced_tax_escrow']/1000:,.1f}k</td>
                         <td class='section-balances'>${row['end_c']/1000:,.1f}k</td>
                         <td class='section-balances'>${row['end_b']/1000:,.1f}k</td>
                         <td class='section-balances' style='color:#b45309; font-weight:bold;'>${row['end_t']/1000:,.1f}k</td>
@@ -606,9 +611,9 @@ function toggleModeUI() {
             <tr>
                 <th>Yr</th><th>Age</th>
                 <th class="section-demand">Budget Need</th><th class="section-demand">Deficit</th>
-                <th class="section-sources">Fixed Floors</th><th class="section-sources">1. Mandatory Pre-Tax Dispersal</th><th class="section-sources">2. Brokerage (0% CapGains)</th><th class="section-sources">3. Roth Cushion</th><th class="section-sources">Outside Tax Escrow Pool</th>
+                <th class="section-sources">Fixed Floors</th><th class="section-sources">1. Pre-Tax Base Draw</th><th class="section-sources">2. Brokerage Draw</th><th class="section-sources">3. Roth Draw</th><th class="section-sources">Outside Tax Paid</th>
                 <th class="section-balances">Cash Balance</th><th class="section-balances">Brokerage</th><th class="section-balances">Pre-Tax Bal</th><th class="section-balances">Roth Balance</th>
-                <th class="section-metrics">RMD Hit</th><th class="section-metrics">Executed Conv.</th><th class="section-metrics">Total AGI</th><th class="section-metrics">Calculated Tax Bill</th><th class="section-metrics">IRMAA Risk</th>
+                <th class="section-metrics">RMD Hit</th><th class="section-metrics">Forced Conv.</th><th class="section-metrics">Total AGI</th><th class="section-metrics">Total Taxes</th><th class="section-metrics">IRMAA Risk</th>
             </tr>`;
     }
 }
@@ -674,12 +679,12 @@ function saveToBrowserStorage() {
         target_bracket: document.getElementById('target_bracket').value,
         state_tax_rate: document.getElementById('state_tax_rate').value
     };
-    localStorage.setItem('retirement_matrix_v21_data', JSON.stringify(data));
+    localStorage.setItem('retirement_matrix_v22_data', JSON.stringify(data));
     alert('Matrix configurations localized to browser engine cache.');
 }
 
 function loadFromBrowserStorage() {
-    const raw = localStorage.getItem('retirement_matrix_v21_data');
+    const raw = localStorage.getItem('retirement_matrix_v22_data');
     if(!raw) { alert('No configuration metrics trace found in native browser database.'); return; }
     const data = JSON.parse(raw);
     for(let key in data) {
