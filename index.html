@@ -2,183 +2,181 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retirement Engine v20 - Pre-Tax Bracket Optimizer & 0% LTCG Cascade</title>
-    <link rel="stylesheet" href="https://pyscript.net/releases/2026.3.1/core.css" />
-    <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
+    <title>Retirement Matrix v21 - Pre-Tax Dispersal Engine</title>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 6px; font-size: 11px; }
-        .container { max-width: 100%; margin: 0 auto; background: #fff; padding: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 4px; }
-        h3 { color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin: 6px 0 3px 0; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 4px; margin-bottom: 6px; background: #f1f5f9; padding: 5px; border-radius: 4px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 10px; font-size: 11px; }
+        .container { max-width: 1400px; margin: 0 auto; background: #fff; padding: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-radius: 6px; }
+        h3 { color: #1e3a8a; border-bottom: 2px solid #cbd5e1; padding-bottom: 4px; margin: 12px 0 6px 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; margin-bottom: 10px; background: #f1f5f9; padding: 8px; border-radius: 4px; }
         .input-group { display: flex; flex-direction: column; }
-        .input-group label { font-size: 0.68rem; font-weight: 700; color: #334155; margin-bottom: 1px; }
-        .input-group input, .input-group select { padding: 2px; border: 1px solid #94a3b8; border-radius: 3px; font-size: 0.72rem; background: #fff; }
-        table { width: 100%; border-collapse: collapse; margin-top: 3px; font-size: 0.7rem; }
-        th, td { border: 1px solid #cbd5e1; padding: 2px 3px; text-align: right; white-space: nowrap; }
+        .input-group label { font-size: 0.7rem; font-weight: 700; color: #334155; margin-bottom: 2px; }
+        .input-group input, .input-group select { padding: 4px; border: 1px solid #94a3b8; border-radius: 4px; font-size: 0.75rem; background: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.72rem; }
+        th, td { border: 1px solid #cbd5e1; padding: 4px 5px; text-align: right; white-space: nowrap; }
         th { background-color: #e2e8f0; color: #0f172a; font-weight: 700; text-align: center; }
-        .btn { background: #2563eb; color: white; border: none; padding: 3px 6px; font-weight: bold; cursor: pointer; border-radius: 3px; font-size: 0.72rem; }
+        .btn { background: #2563eb; color: white; border: none; padding: 5px 10px; font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 0.75rem; }
         .btn:hover { background: #1d4ed8; }
-        #chart-wrapper { width: 100%; height: 220px; margin: 6px 0; background: #fafafa; border: 1px solid #cbd5e1; border-radius: 3px; }
+        #chart-wrapper { width: 100%; height: 280px; margin: 12px 0; background: #fafafa; border: 1px solid #cbd5e1; border-radius: 4px; }
         .section-demand { background-color: #f0f9ff; }
         .section-sources { background-color: #fefecb; }
         .section-balances { background-color: #f0fdf4; }
         .section-metrics { background-color: #faf5ff; }
-        .diagnostic-card { background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; margin-bottom: 6px; font-size: 0.75rem; color: #1e293b; }
-        input[type="text"], input[type="number"] { width: 100%; box-sizing: border-box; padding: 1px 3px; font-size: 0.7rem; }
+        .diagnostic-card { background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px; border-radius: 4px; margin-bottom: 8px; font-size: 0.8rem; color: #1e40af; line-height: 1.4; }
         .txt-left { text-align: left; }
+        input[type="text"], input[type="number"] { width: 100%; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; background: #1e3a8a; color: white; padding: 3px 8px; border-radius: 3px;">
-        <span style="font-weight: bold; font-size: 0.85rem;">Retirement Matrix v20 [Pre-Tax Max Optimization Cascade]</span>
-        <div style="display: flex; gap: 4px;">
-            <button class="btn" style="background:#0ea5e9; padding: 1px 5px;" onclick="saveToBrowserStorage()">💾 Save</button>
-            <button class="btn" style="background:#64748b; padding: 1px 5px;" onclick="loadFromBrowserStorage()">📂 Load</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; background: #1e3a8a; color: white; padding: 6px 12px; border-radius: 4px;">
+        <span style="font-weight: bold; font-size: 1rem;">Retirement Matrix v21 [Pre-Tax To Zero Strategy Console]</span>
+        <div style="display: flex; gap: 6px;">
+            <button class="btn" style="background:#0ea5e9;" onclick="saveToBrowserStorage()">💾 Save Config</button>
+            <button class="btn" style="background:#64748b;" onclick="loadFromBrowserStorage()">📂 Load Config</button>
         </div>
     </div>
 
-    <div id="optimizer-diagnostic-panel" class="diagnostic-card" style="margin-top: 4px;">
-        📊 Select execution settings and run the simulation matrix.
+    <div id="optimizer-diagnostic-panel" class="diagnostic-card" style="margin-top: 6px;">
+        📊 Configure parameters and invoke execution to map the Pre-Tax liquidation curve.
     </div>
 
-    <h3>Strategic System Controls</h3>
+    <h3>1. System Controls & Targets</h3>
     <div class="grid-inputs">
         <div class="input-group">
-            <label>Execution Engine Mode</label>
+            <label>Execution Mode</label>
             <select id="simulation_mode" onchange="toggleModeUI()">
-                <option value="DETERMINISTIC" selected>📈 Deterministic Tax Optimizer</option>
-                <option value="STOCHASTIC">🎲 Stochastic Monte Carlo (1k Trials)</option>
+                <option value="DETERMINISTIC" selected>📈 Deterministic Ledger Audit</option>
+                <option value="STOCHASTIC">🎲 Stochastic Monte Carlo (1k Runs)</option>
             </select>
         </div>
-        <div class="input-group"><label>Current Age</label><input type="number" id="current_age" value="62"></div>
-        <div class="input-group"><label>Retirement Age</label><input type="number" id="retirement_age" value="66"></div>
-        <div class="input-group"><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.005" value="0.03"></div>
-        <div class="input-group"><label>Base Need Today ($)</label><input type="number" id="annual_spending" value="95000"></div>
-        <div class="input-group"><label>Cash Reserve Strategy</label><select id="cash_buffer_years"><option value="1" selected>Strict 1-Year Max Cap</option></select></div>
+        <div class="input-group"><label>Current Age</label><input type="number" id="current_age" value="60"></div>
+        <div class="input-group"><label>Retirement Age</label><input type="number" id="retirement_age" value="60"></div>
+        <div class="input-group"><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.005" value="0.025"></div>
+        <div class="input-group"><label>Base Living Cost Today ($)</label><input type="number" id="annual_spending" value="85000"></div>
+        <div class="input-group">
+            <label>Conversion Bracket Ceiling</label>
+            <select id="target_bracket">
+                <option value="0.12" selected>Top of 12% / 15% Bracket</option>
+                <option value="0.22">Top of 22% / 25% Bracket</option>
+                <option value="0.24">Top of 24% / 28% Bracket</option>
+                <option value="MAX_FAST">Max Out (Liquidate ASAP)</option>
+            </select>
+        </div>
         <div class="input-group"><label>Filing Status</label><select id="filing_status"><option value="MFJ" selected>MFJ</option><option value="Single">Single</option></select></div>
         <div class="input-group">
-            <label>Tax Law Policy</label>
+            <label>2026 Tax Law Rules</label>
             <select id="tax_regime_mode">
-                <option value="SUNSET" selected>⚠️ Revert to Higher Rates</option>
-                <option value="EXTENDED">Keep Current Lower Rates</option>
+                <option value="SUNSET" selected>⚠️ Apply TCJA Reverted Higher Rates</option>
+                <option value="EXTENDED">Maintain Legacy Lower Rates</option>
             </select>
         </div>
-        <div class="input-group">
-            <label>Pre-Tax Efficient Bracket</label>
-            <select id="target_bracket">
-                <option value="AUTO" selected>🤖 Auto-Optimize Bracket</option>
-                <option value="0.10">Target 10% Bracket</option>
-                <option value="0.12">Target 12% Bracket</option>
-                <option value="0.22">Target 22% Bracket</option>
-            </select>
-        </div>
-        <div class="input-group"><label>State Tax (%)</label><input type="number" id="state_tax_rate" step="0.1" value="4.0"></div>
-        <div class="input-group"><label>Pre-Retire Savings ($)</label><input type="number" id="annual_savings_contribution" value="15000"></div>
+        <div class="input-group"><label>Combined State Tax (%)</label><input type="number" id="state_tax_rate" step="0.1" value="4.0"></div>
     </div>
 
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
         <div>
-            <h3>Ordinary Inflow Floors</h3>
+            <h3>2. Baseline Inflow Floors (Pensions, Social Security)</h3>
             <table id="income-floor-table">
-                <thead><tr><th>Description</th><th>Start</th><th>End</th><th>Amount Today</th><th style="width:15px;">X</th></tr></thead>
+                <thead><tr><th>Description</th><th>Start Age</th><th>End Age</th><th>Amount Today ($)</th><th style="width:20px;">X</th></tr></thead>
                 <tbody id="income-floor-body">
                     <tr>
-                        <td class="txt-left"><input type="text" class="floor-name" value="Social Security"></td>
+                        <td class="txt-left"><input type="text" class="floor-name" value="Social Security (Combined)"></td>
                         <td><input type="number" class="floor-start" value="67"></td>
                         <td><input type="number" class="floor-end" value="100"></td>
-                        <td><input type="number" class="floor-amount" value="45000"></td>
+                        <td><input type="number" class="floor-amount" value="40000"></td>
                         <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
                     </tr>
                 </tbody>
             </table>
-            <button class="btn" style="margin-top:2px; padding:1px 4px; font-size:0.62rem; background:#64748b;" onclick="addFloorRow()">+ Inflow Floor</button>
+            <button class="btn" style="margin-top:4px; padding:2px 6px; font-size:0.65rem; background:#64748b;" onclick="addFloorRow()">+ Add Fixed Income Floor</button>
         </div>
         <div>
-            <h3>Outlays & Conversions</h3>
+            <h3>3. Special Event Shocks (One-Time Outlays)</h3>
             <table id="outlays-table">
-                <thead><tr><th>Type</th><th>Age</th><th>Amount ($)</th><th style="width:15px;">X</th></tr></thead>
+                <thead><tr><th>Type</th><th>Age</th><th>Amount Today ($)</th><th style="width:20px;">X</th></tr></thead>
                 <tbody id="outlays-body">
                     <tr>
-                        <td><select class="outlay-type"><option value="Outlay">Outlay Shock</option><option value="Conversion">Roth Conv Event</option></select></td>
-                        <td><input type="number" class="outlay-age" value="68"></td>
+                        <td><select class="outlay-type"><option value="Outlay">Outlay Capital Shock</option></select></td>
+                        <td><input type="number" class="outlay-age" value="65"></td>
                         <td><input type="number" class="outlay-amount" value="0"></td>
                         <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
                     </tr>
                 </tbody>
             </table>
-            <button class="btn" style="margin-top:2px; padding:1px 4px; font-size:0.62rem; background:#64748b;" onclick="addOutlayRow()">+ Special Event</button>
+            <button class="btn" style="margin-top:4px; padding:2px 6px; font-size:0.65rem; background:#64748b;" onclick="addOutlayRow()">+ Add Special Outlay Event</button>
         </div>
     </div>
 
-    <h3>Asset Wrappers Matrix Layout</h3>
+    <h3>4. Initial Asset Allocation Matrix Layout</h3>
     <table id="accounts-table">
-        <thead><tr><th>Identifier Wrapper Name</th><th>Tax Class Category</th><th>Current Balance</th><th>Cost Basis ($)</th><th>Mean Growth</th><th style="width:15px;">X</th></tr></thead>
+        <thead><tr><th>Wrapper Account Identifier</th><th>Tax Treatment Category</th><th>Current Balance ($)</th><th>Cost Basis ($)</th><th>Projected Nominal Growth Rate</th><th style="width:20px;">X</th></tr></thead>
         <tbody id="accounts-body">
             <tr>
-                <td class="txt-left"><input type="text" class="acc-name" value="Pre-Tax Traditional IRA"></td>
+                <td class="txt-left"><input type="text" class="acc-name" value="Core Pre-Tax IRA"></td>
                 <td><select class="acc-type"><option value="Traditional" selected>Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash">Cash/HYSA</option></select></td>
-                <td><input type="number" class="acc-balance" value="1200000"></td>
+                <td><input type="number" class="acc-balance" value="1000000"></td>
                 <td><input type="number" class="acc-basis" value="0"></td>
                 <td><input type="number" class="acc-return" step="0.005" value="0.065"></td>
                 <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
             </tr>
             <tr>
-                <td class="txt-left"><input type="text" class="acc-name" value="Large Accumulation Roth"></td>
+                <td class="txt-left"><input type="text" class="acc-name" value="Target Growth Roth"></td>
                 <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth" selected>Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash">Cash/HYSA</option></select></td>
-                <td><input type="number" class="acc-balance" value="400000"></td>
+                <td><input type="number" class="acc-balance" value="200000"></td>
                 <td><input type="number" class="acc-basis" value="0"></td>
-                <td><input type="number" class="acc-return" step="0.005" value="0.065"></td>
+                <td><input type="number" class="acc-return" step="0.005" value="0.07"></td>
                 <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
             </tr>
             <tr>
-                <td class="txt-left"><input type="text" class="acc-name" value="Taxable Brokerage Core"></td>
+                <td class="txt-left"><input type="text" class="acc-name" value="Taxable Brokerage Escrow"></td>
                 <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash/HYSA</option></select></td>
-                <td><input type="number" class="acc-balance" value="500000"></td>
-                <td><input type="number" class="acc-basis" value="300000"></td>
+                <td><input type="number" class="acc-balance" value="300000"></td>
+                <td><input type="number" class="acc-basis" value="200000"></td>
                 <td><input type="number" class="acc-return" step="0.005" value="0.06"></td>
                 <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
             </tr>
             <tr>
-                <td class="txt-left"><input type="text" class="acc-name" value="Emergency Cash Mix"></td>
+                <td class="txt-left"><input type="text" class="acc-name" value="Tax Liquidity Bank Fund"></td>
                 <td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage">Taxable Brokerage</option><option value="Cash" selected>Cash/HYSA</option></select></td>
-                <td><input type="number" class="acc-balance" value="95000"></td>
-                <td><input type="number" class="acc-basis" value="95000"></td>
+                <td><input type="number" class="acc-balance" value="100000"></td>
+                <td><input type="number" class="acc-basis" value="100000"></td>
                 <td><input type="number" class="acc-return" step="0.005" value="0.04"></td>
                 <td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
             </tr>
         </tbody>
     </table>
-    <button class="btn" style="margin-top:2px; padding:1px 4px; font-size:0.62rem; background:#64748b;" onclick="addAccountRow()">+ Asset Wrapper</button>
+    <button class="btn" style="margin-top:4px; padding:2px 6px; font-size:0.65rem; background:#64748b;" onclick="addAccountRow()">+ Add Asset Wrapper</button>
 
-    <div style="margin-top:4px;">
-        <button class="btn" style="width:100%; padding:5px; font-size:0.82rem; background:#16a34a;" onclick="triggerEngine()">⚡ Execute Simulation & Update Stacked Graph</button>
+    <div style="margin-top:8px;">
+        <button class="btn" style="width:100%; padding:8px; font-size:0.9rem; background:#16a34a;" onclick="triggerEngine()">⚡ Execute Simulation & Map Stacked Asset Trajectories</button>
     </div>
 
     <div id="chart-wrapper"><canvas id="canvasChart"></canvas></div>
 
-    <h3 id="table-header-title">Granular Liquidation Audit Ledger ($K View)</h3>
+    <h3 id="table-header-title">Granular Liquidation Ledger Audit Log ($K View)</h3>
     <table style="width:100%;">
         <thead id="table-head-deterministic">
             <tr>
                 <th colspan="2">Timeline</th>
-                <th colspan="2" class="section-demand">Needs ($K)</th>
-                <th colspan="5" class="section-sources">Sequential Tax Draw Cascade ($K)</th>
-                <th colspan="4" class="section-balances">Year-End Wrappers ($K)</th>
-                <th colspan="5" class="section-metrics">Tax Optimization Metrics & Surcharges</th>
+                <th colspan="2" class="section-demand">Livelihood Budgets ($K)</th>
+                <th colspan="5" class="section-sources">Drawdown Sourcing & Mandatory Conversions Cascade ($K)</th>
+                <th colspan="4" class="section-balances">Year-End Portfolio Breakdown ($K)</th>
+                <th colspan="5" class="section-metrics">Tax Framework Engine Outlays</th>
             </tr>
             <tr>
                 <th>Yr</th><th>Age</th>
-                <th class="section-demand">Gross</th><th class="section-demand">Deficit</th>
-                <th class="section-sources">Floor+RMD</th><th class="section-sources">1. PreTax Eff. Draw</th><th class="section-sources">2. 0% LTCG Brok</th><th class="section-sources">3. Roth (Rest)</th><th class="section-sources">Liquid Cash Pool</th>
-                <th class="section-balances">Cash</th><th class="section-balances">Brok</th><th class="section-balances">PreTax</th><th class="section-balances">Roth</th>
-                <th class="section-metrics">RMD</th><th class="section-metrics">Conv.</th><th class="section-metrics">AGI</th><th class="section-metrics">Eff Tax %</th><th class="section-metrics">IRMAA</th>
+                <th class="section-demand">Budget Need</th><th class="section-demand">Deficit</th>
+                <th class="section-sources">Fixed Floors</th><th class="section-sources">1. Mandatory Pre-Tax Dispersal</th><th class="section-sources">2. Brokerage (0% CapGains)</th><th class="section-sources">3. Roth Cushion</th><th class="section-sources">Outside Tax Escrow Pool</th>
+                <th class="section-balances">Cash Balance</th><th class="section-balances">Brokerage</th><th class="section-balances">Pre-Tax Bal</th><th class="section-balances">Roth Balance</th>
+                <th class="section-metrics">RMD Hit</th><th class="section-metrics">Executed Conv.</th><th class="section-metrics">Total AGI</th><th class="section-metrics">Calculated Tax Bill</th><th class="section-metrics">IRMAA Risk</th>
             </tr>
         </thead>
         <tbody id="results-body">
-            <tr><td colspan="18" style="text-align:center; color:#64748b; padding:8px;">Execute parameters to compile matrix ledger.</td></tr>
+            <tr><td colspan="18" style="text-align:center; color:#64748b; padding:12px;">Invoke engine framework parameters to generate audit matrices.</td></tr>
         </tbody>
     </table>
 </div>
@@ -188,20 +186,22 @@ import json
 import random
 from pyscript import document, window
 
-BRACKETS_CURRENT = {
-    'Single': [(12400, 0.10), (50400, 0.12), (105700, 0.22), (201775, 0.24), (256225, 0.32), (640600, 0.35), (float('inf'), 0.37)],
-    'MFJ': [(24800, 0.10), (100800, 0.12), (211400, 0.22), (403550, 0.24), (512450, 0.32), (768700, 0.35), (float('inf'), 0.37)]
-}
-DEDUCTION_CURRENT = {'Single': 16100, 'MFJ': 32200}
-
+# 2026 Reverted Post-Sunset Parameters
 BRACKETS_REVERTED = {
     'Single': [(10000, 0.10), (40000, 0.15), (95000, 0.25), (200000, 0.28), (430000, 0.33), (float('inf'), 0.396)],
     'MFJ': [(20000, 0.10), (80000, 0.15), (160000, 0.25), (250000, 0.28), (450000, 0.33), (float('inf'), 0.396)]
 }
 DEDUCTION_REVERTED = {'Single': 8500, 'MFJ': 17000}
 
+# 2026 Indexed Extension Parameters
+BRACKETS_CURRENT = {
+    'Single': [(12400, 0.10), (50400, 0.12), (105700, 0.22), (201775, 0.24), (256225, 0.32), (640600, 0.35), (float('inf'), 0.37)],
+    'MFJ': [(24800, 0.10), (100800, 0.12), (211400, 0.22), (403550, 0.24), (512450, 0.32), (768700, 0.35), (float('inf'), 0.37)]
+}
+DEDUCTION_CURRENT = {'Single': 16100, 'MFJ': 32200}
+
 IRMAA_THRESHOLDS = {'Single': [109000, 137000, 171000, 205000], 'MFJ': [218000, 274000, 342000, 410000]}
-VOLATILITIES = {'Brokerage': 0.15, 'Traditional': 0.16, 'Roth': 0.16, 'Cash': 0.02}
+VOLATILITIES = {'Brokerage': 0.15, 'Traditional': 0.14, 'Roth': 0.15, 'Cash': 0.01}
 
 def safe_float(element_id, default=0.0):
     val = document.getElementById(element_id).value.strip()
@@ -211,14 +211,14 @@ def safe_int(element_id, default=0):
     val = document.getElementById(element_id).value.strip()
     return int(val) if val else default
 
-def calculate_dynamic_tax(ordinary_income, capital_gains, filing_status, force_sunset, current_sim_year):
-    use_sunset = force_sunset and (current_sim_year >= 2)
-    brackets = BRACKETS_REVERTED[filing_status] if use_sunset else BRACKETS_CURRENT[filing_status]
-    deduction = DEDUCTION_REVERTED[filing_status] if use_sunset else DEDUCTION_CURRENT[filing_status]
+def compute_tax_liability(ordinary_income, capital_gains, filing_status, force_sunset):
+    brackets = BRACKETS_REVERTED[filing_status] if force_sunset else BRACKETS_CURRENT[filing_status]
+    deduction = DEDUCTION_REVERTED[filing_status] if force_sunset else DEDUCTION_CURRENT[filing_status]
     
-    taxable_ordinary = max(0, ordinary_income - deduction)
+    taxable_ordinary = max(0.0, ordinary_income - deduction)
     ord_tax = 0.0
     previous_limit = 0.0
+    
     for limit, rate in brackets:
         if taxable_ordinary > limit:
             ord_tax += (limit - previous_limit) * rate
@@ -227,242 +227,237 @@ def calculate_dynamic_tax(ordinary_income, capital_gains, filing_status, force_s
             ord_tax += (taxable_ordinary - previous_limit) * rate
             break
             
-    cg_bracket_0_limit = 98900 if filing_status == 'MFJ' else 49450
-    if use_sunset: cg_bracket_0_limit = 80000 if filing_status == 'MFJ' else 40000
+    cg_bracket_0_limit = 80000 if force_sunset else 98900
+    if filing_status == 'Single': cg_bracket_0_limit = 40000 if force_sunset else 49450
     
-    total_combination_income = taxable_ordinary + capital_gains
+    combined_total = taxable_ordinary + capital_gains
     cg_tax = 0.0
-    if total_combination_income > cg_bracket_0_limit:
-        taxable_at_15 = total_combination_income - max(taxable_ordinary, cg_bracket_0_limit)
+    if combined_total > cg_bracket_0_limit:
+        taxable_at_15 = combined_total - max(taxable_ordinary, cg_bracket_0_limit)
         cg_tax = max(0.0, taxable_at_15) * 0.15
         
     return ord_tax + cg_tax
 
-def run_isolated_scenario(target_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, is_stochastic=False):
+def run_isolated_scenario(target_bracket_input, cur_age, ret_age, inflation, spending_base, filing_status, state_tax_rate, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, is_stochastic=False):
     accounts = []
     for idx in range(len(a_names)):
         accounts.append({'name': a_names[idx], 'type': a_types[idx], 'balance': a_balances[idx], 'basis': a_bases[idx], 'rate': a_returns[idx]})
     
-    if not any(t == 'Roth' for t in a_types):
-        accounts.append({'name': 'Automated Conversion Roth', 'type': 'Roth', 'balance': 0.0, 'basis': 0.0, 'rate': 0.065})
+    if not any(acc['type'] == 'Roth' for acc in accounts):
+        accounts.append({'name': 'System Gen Roth', 'type': 'Roth', 'balance': 0.0, 'basis': 0.0, 'rate': 0.065})
 
-    historical_agi = {}
     ledger_logs = []
     total_lifetime_taxes = 0.0
     
     for yr in range(1, 41):
         age = cur_age + yr - 1
-        use_sunset_this_year = force_sunset and (yr >= 2)
         
-        brackets = BRACKETS_REVERTED[filing_status] if use_sunset_this_year else BRACKETS_CURRENT[filing_status]
-        deduction = DEDUCTION_REVERTED[filing_status] if use_sunset_this_year else DEDUCTION_CURRENT[filing_status]
+        brackets = BRACKETS_REVERTED[filing_status] if force_sunset else BRACKETS_CURRENT[filing_status]
+        deduction = DEDUCTION_REVERTED[filing_status] if force_sunset else DEDUCTION_CURRENT[filing_status]
         
-        # Calculate maximum ordinary gross income limit for target efficient bracket choice
-        max_ordinary_income_allowed = deduction
-        if target_bracket_rate > 0:
+        # Determine ceiling of target conversion bracket
+        max_ordinary_allowed = deduction
+        if target_bracket_input == "MAX_FAST":
+            max_ordinary_allowed = float('inf')
+        else:
+            target_rate = float(target_bracket_input)
             for limit, rate in brackets:
-                if rate <= target_bracket_rate:
-                    max_ordinary_income_allowed = deduction + limit
+                if rate <= target_rate:
+                    max_ordinary_allowed = deduction + limit
                 else:
                     break
 
-        if age < ret_age:
-            contrib = pre_retire_savings * ((1 + inflation) ** (yr - 1))
-            for acc in accounts:
-                if acc['type'] == 'Traditional': acc['balance'] += contrib; break
-
         base_need = spending_base * ((1 + inflation) ** (yr - 1) if age >= ret_age else 0.0)
         shock_need = 0.0
-        manual_conversion_demand = 0.0
-        
         for idx, o_age in enumerate(o_ages):
             if o_age == age:
-                inflated_amt = o_amts[idx] * ((1 + inflation) ** (yr - 1))
-                if o_types[idx] == "Outlay": shock_need += inflated_amt
-                else: manual_conversion_demand += inflated_amt
+                shock_need += o_amts[idx] * ((1 + inflation) ** (yr - 1))
 
         realized_cash_demand = base_need + shock_need
-        current_year_floor = sum(f_amounts[i] * ((1 + inflation) ** (yr - 1)) for i in range(len(f_names)) if f_starts[i] <= age <= f_ends[i])
+        fixed_floor_inflows = sum(f_amounts[i] * ((1 + inflation) ** (yr - 1)) for i in range(len(f_names)) if f_starts[i] <= age <= f_ends[i])
 
-        trad_total = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
-        if trad_total <= 0:
+        # Track total Pre-Tax balance for RMD checks
+        pretax_aggregate = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
+        if pretax_aggregate <= 0:
             rmd_req = 0.0
         else:
-            rmd_div = (27.4 - (age - 73)) if age >= 73 else 0
-            rmd_req = (trad_total / rmd_div) if rmd_div > 0 else 0.0
+            divisor = (27.4 - (age - 73)) if age >= 73 else 0
+            rmd_req = (pretax_aggregate / divisor) if divisor > 0 else 0.0
 
-        base_revenue_flow = current_year_floor + rmd_req
-        ordinary_income_flow = current_year_floor + rmd_req
+        # Satisfy base floors and mandatory RMDs
+        ordinary_income_flow = fixed_floor_inflows + rmd_req
         capital_gains_realized = 0.0
 
         rem_rmd = rmd_req
         for acc in accounts:
             if acc['type'] == 'Traditional' and acc['balance'] > 0:
-                w = min(rem_rmd, acc['balance'])
-                acc['balance'] -= w; rem_rmd -= w
+                draw = min(rem_rmd, acc['balance'])
+                acc['balance'] -= draw
+                rem_rmd -= draw
 
-        net_deficit = max(0.0, realized_cash_demand - (current_year_floor + rmd_req))
+        net_deficit = max(0.0, realized_cash_demand - (fixed_floor_inflows + rmd_req))
         rem_cash_needed = net_deficit
         
-        sourced_pretax_bracket = 0.0
-        sourced_brokerage_0pc = 0.0
-        sourced_roth_rest = 0.0
-        sourced_cash_pool = 0.0
+        sourced_pretax = 0.0
+        sourced_brokerage = 0.0
+        sourced_roth = 0.0
+        sourced_tax_escrow = 0.0
 
+        # Mandated Pre-Tax Bracket Sourcing Cascade
         if age >= ret_age and rem_cash_needed > 0:
-            # STEP 1: Max out Pre-Tax up to the target efficiency bracket ceiling first
-            available_pretax_space = max(0.0, max_ordinary_income_allowed - ordinary_income_flow)
-            if available_pretax_space > 0:
+            available_space = max(0.0, max_ordinary_allowed - ordinary_income_flow)
+            if available_space > 0:
                 for acc in accounts:
-                    if acc['type'] == 'Traditional' and acc['balance'] > 0 and available_pretax_space > 0:
-                        pull = min([rem_cash_needed, acc['balance'], available_pretax_space])
+                    if acc['type'] == 'Traditional' and acc['balance'] > 0 and available_space > 0:
+                        pull = min([rem_cash_needed, acc['balance'], available_space])
                         ordinary_income_flow += pull
-                        available_pretax_space -= pull
-                        sourced_pretax_bracket += pull
+                        available_space -= pull
+                        sourced_pretax += pull
                         acc['balance'] -= pull
                         rem_cash_needed -= pull
 
-            # STEP 2: Fill remaining cash deficit using Brokerage up to the 0% Capital Gains Limit
+            # Top off with Brokerage inside 0% Capital Gains window
             if rem_cash_needed > 0:
-                cg_bracket_0_limit = 98900 if filing_status == 'MFJ' else 49450
-                if use_sunset_this_year: cg_bracket_0_limit = 80000 if filing_status == 'MFJ' else 40000
-                
-                taxable_ordinary = max(0, ordinary_income_flow - deduction)
-                remaining_0pc_cg_space = max(0.0, cg_bracket_0_limit - taxable_ordinary)
+                cg_limit = 80000 if force_sunset else 98900
+                if filing_status == 'Single': cg_limit = 40000 if force_sunset else 49450
+                taxable_ord = max(0.0, ordinary_income_flow - deduction)
+                remaining_cg_space = max(0.0, cg_limit - taxable_ord)
                 
                 for acc in accounts:
-                    if acc['type'] == 'Brokerage' and acc['balance'] > 0 and remaining_0pc_cg_space > 0:
-                        g_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
+                    if acc['type'] == 'Brokerage' and acc['balance'] > 0 and remaining_cg_space > 0:
+                        gain_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
+                        max_with = remaining_cg_space / gain_ratio if gain_ratio > 0 else rem_cash_needed
+                        allowed = min([rem_cash_needed, acc['balance'], max_with])
                         
-                        if g_ratio > 0:
-                            max_withdrawal_to_cap_cg = remaining_0pc_cg_space / g_ratio
-                        else:
-                            max_withdrawal_to_cap_cg = rem_cash_needed
-                            
-                        allowed_draw = min([rem_cash_needed, acc['balance'], max_withdrawal_to_cap_cg])
-                        
-                        capital_gains_realized += allowed_draw * g_ratio
-                        remaining_0pc_cg_space -= allowed_draw * g_ratio
-                        sourced_brokerage_0pc += allowed_draw
-                        acc['basis'] -= (allowed_draw * (1.0 - g_ratio))
-                        acc['balance'] -= allowed_draw
-                        rem_cash_needed -= allowed_draw
+                        capital_gains_realized += allowed * gain_ratio
+                        remaining_cg_space -= allowed * gain_ratio
+                        sourced_brokerage += allowed
+                        acc['basis'] -= (allowed * (1.0 - gain_ratio))
+                        acc['balance'] -= allowed
+                        rem_cash_needed -= allowed
 
-            # STEP 3: Fund the remaining budget shortfall from the Roth account
+            # Fund remaining budget shortfall from Roth
             if rem_cash_needed > 0:
                 for acc in accounts:
                     if acc['type'] == 'Roth' and acc['balance'] > 0:
                         pull = min(rem_cash_needed, acc['balance'])
-                        sourced_roth_rest += pull; acc['balance'] -= pull; rem_cash_needed -= pull
+                        sourced_roth += pull
+                        acc['balance'] -= pull
+                        rem_cash_needed -= pull
 
-            # STEP 4: Fallback to liquid cash cushion if constraints are fully saturated
+            # Fallback to cash pool
             if rem_cash_needed > 0:
                 for acc in accounts:
                     if acc['type'] == 'Cash' and acc['balance'] > 0:
                         pull = min(rem_cash_needed, acc['balance'])
-                        sourced_cash_pool += pull; acc['balance'] -= pull; rem_cash_needed -= pull
+                        sourced_tax_escrow += pull
+                        acc['balance'] -= pull
+                        rem_cash_needed -= pull
 
-        # Overflow catchall to maintain cash requirement solvency
+        # Solvency overflow catch-all
         if rem_cash_needed > 0:
-            for c_type in ['Traditional', 'Brokerage', 'Roth']:
+            for wrap in ['Traditional', 'Brokerage', 'Roth']:
                 if rem_cash_needed <= 0: break
                 for acc in accounts:
-                    if acc['type'] == c_type and acc['balance'] > 0:
+                    if acc['type'] == wrap and acc['balance'] > 0:
                         pull = min(rem_cash_needed, acc['balance'])
-                        if c_type == 'Traditional': ordinary_income_flow += pull
-                        elif c_type == 'Brokerage':
-                            g_ratio = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
-                            capital_gains_realized += pull * g_ratio
-                            acc['basis'] -= (pull * (1.0 - g_ratio))
-                        acc['balance'] -= pull; rem_cash_needed -= pull
+                        if wrap == 'Traditional': ordinary_income_flow += pull
+                        elif wrap == 'Brokerage':
+                            gr = max(0.0, 1.0 - (acc['basis'] / acc['balance'])) if acc['balance'] > 0 else 0.0
+                            capital_gains_realized += pull * gr
+                            acc['basis'] -= (pull * (1.0 - gr))
+                        acc['balance'] -= pull
+                        rem_cash_needed -= pull
 
-        # Dedicated Roth Conversions Module
-        total_conv_made = 0.0
-        current_trad_bal = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
-        combined_conversion_target = manual_conversion_demand + max(0.0, max_ordinary_income_allowed - ordinary_income_flow)
-        if target_bracket_rate > 0 and combined_conversion_target > 0 and current_trad_bal > 0:
-            exec_conv = min(combined_conversion_target, current_trad_bal)
-            ordinary_income_flow += exec_conv; total_conv_made += exec_conv
-            temp_rem = exec_conv
+        # AGGRESSIVE ROTH CONVERSIONS TO DISPERSE PRE-TAX BUCKET
+        total_conv_executed = 0.0
+        current_pretax_rem = sum(a['balance'] for a in accounts if a['type'] == 'Traditional')
+        
+        if current_pretax_rem > 0:
+            conversion_headroom = max(0.0, max_ordinary_allowed - ordinary_income_flow)
+            if target_bracket_input == "MAX_FAST":
+                conversion_headroom = current_pretax_rem # Convert entire remaining Pre-Tax balance immediately
+                
+            if conversion_headroom > 0:
+                exec_amt = min(conversion_headroom, current_pretax_rem)
+                ordinary_income_flow += exec_amt
+                total_conv_executed += exec_amt
+                
+                temp_rem = exec_amt
+                for acc in accounts:
+                    if acc['type'] == 'Traditional' and acc['balance'] > 0:
+                        a_draw = min(temp_rem, acc['balance'])
+                        acc['balance'] -= a_draw
+                        temp_rem -= a_draw
+                        
+                for acc in accounts:
+                    if acc['type'] == 'Roth':
+                        acc['balance'] += exec_amt
+                        break
+
+        # Calculate exact tax liabilities
+        agi_calculated = ordinary_income_flow + capital_gains_realized
+        fed_tax_bill = compute_tax_liability(ordinary_income_flow, capital_gains_realized, filing_status, force_sunset)
+        state_tax_bill = agi_calculated * state_tax_rate
+        total_tax_bill = fed_tax_bill + state_tax_bill
+        
+        # Fund the tax bill from Cash or Brokerage escrow (preserving the Roth)
+        rem_tax_to_pay = total_tax_bill
+        total_lifetime_taxes += total_tax_bill
+        
+        for pool_type in ['Cash', 'Brokerage', 'Roth']:
+            if rem_tax_to_pay <= 0: break
             for acc in accounts:
-                if acc['type'] == 'Traditional' and acc['balance'] > 0:
-                    amt = min(temp_rem, acc['balance'])
-                    acc['balance'] -= amt; temp_rem -= amt
-            for acc in accounts:
-                if acc['type'] == 'Roth': acc['balance'] += exec_conv; break
+                if acc['type'] == pool_type and acc['balance'] > 0:
+                    tax_pull = min(rem_tax_to_pay, acc['balance'])
+                    acc['balance'] -= tax_pull
+                    rem_tax_to_pay -= tax_pull
 
-        calculated_agi = ordinary_income_flow + capital_gains_realized
-        historical_agi[age] = calculated_agi
-
-        total_tax = calculate_dynamic_tax(ordinary_income_flow, capital_gains_realized, filing_status, force_sunset, yr) + (calculated_agi * state_tax_rate)
-        available_liquidity = sum(a['balance'] for a in accounts if a['type'] in ['Cash', 'Roth', 'Brokerage'])
-        if total_tax > available_liquidity: total_tax = available_liquidity
-            
-        total_lifetime_taxes += total_tax
-        effective_tax_rate = (total_tax / calculated_agi * 100) if calculated_agi > 0 else 0.0
-
-        rem_tax = total_tax
-        for wrap in ['Cash', 'Roth', 'Brokerage']:
-            if rem_tax <= 0: break
-            for acc in accounts:
-                if acc['type'] == wrap and acc['balance'] > 0:
-                    p = min(rem_tax, acc['balance'])
-                    acc['balance'] -= p; rem_tax -= p
-
+        # Run growth engine iterations
         for acc in accounts:
             if acc['balance'] > 0:
                 if is_stochastic:
-                    vol = VOLATILITIES.get(acc['type'], 0.12)
-                    sim_return = random.normalvariate(acc['rate'], vol)
+                    v = VOLATILITIES.get(acc['type'], 0.12)
+                    rate_iteration = random.normalvariate(acc['rate'], v)
                 else:
-                    sim_return = acc['rate']
-                growth = acc['balance'] * sim_return
-                acc['balance'] += growth
-                if acc['type'] in ['Brokerage', 'Cash']: acc['basis'] += growth * 0.3
-
-        post_growth_cash = sum(a['balance'] for a in accounts if a['type'] == 'Cash')
-        target_cash_reserve = base_need if age >= ret_age else 0.0
-        if age >= ret_age and post_growth_cash > target_cash_reserve:
-            excess_cash = post_growth_cash - target_cash_reserve
-            for acc in accounts:
-                if acc['type'] == 'Cash': acc['balance'] -= excess_cash
-                if acc['type'] == 'Brokerage': 
-                    acc['balance'] += excess_cash; acc['basis'] += excess_cash
+                    rate_iteration = acc['rate']
+                g_yield = acc['balance'] * rate_iteration
+                acc['balance'] += g_yield
+                if acc['type'] in ['Brokerage', 'Cash']: 
+                    acc['basis'] += g_yield * 0.25
 
         end_c = max(0.0, sum(a['balance'] for a in accounts if a['type'] == 'Cash'))
         end_b = max(0.0, sum(a['balance'] for a in accounts if a['type'] == 'Brokerage'))
         end_t = max(0.0, sum(a['balance'] for a in accounts if a['type'] == 'Traditional'))
         end_r = max(0.0, sum(a['balance'] for a in accounts if a['type'] == 'Roth'))
-        current_networth = end_c + end_b + end_t + end_r
+        networth_snapshot = end_c + end_b + end_t + end_r
 
-        lookback_val = historical_agi.get(age - 2, 0.0)
-        irmaa_status = "Safe"
-        if age >= 65 and lookback_val > IRMAA_THRESHOLDS[filing_status][0]: irmaa_status = "⚠️ IRMAA"
+        irmaa_alert = "Safe"
+        if age >= 65 and agi_calculated > IRMAA_THRESHOLDS[filing_status][0]:
+            irmaa_alert = "⚠️ IRMAA Surcharge"
 
         ledger_logs.append({
             'yr': yr, 'age': age, 'realized_cash_demand': realized_cash_demand, 'net_deficit': net_deficit,
-            'base_revenue_flow': base_revenue_flow, 'sourced_pretax_bracket': sourced_pretax_bracket, 
-            'sourced_brokerage_0pc': sourced_brokerage_0pc, 'sourced_roth_rest': sourced_roth_rest, 'sourced_cash_pool': sourced_cash_pool,
+            'fixed_floor_inflows': fixed_floor_inflows, 'sourced_pretax': sourced_pretax, 
+            'sourced_brokerage': sourced_brokerage, 'sourced_roth': sourced_roth, 'sourced_tax_escrow': sourced_tax_escrow,
             'end_c': end_c, 'end_b': end_b, 'end_t': end_t, 'end_r': end_r,
-            'rmd_req': rmd_req, 'total_conv_made': total_conv_made, 'calculated_agi': calculated_agi,
-            'effective_tax_rate': effective_tax_rate, 'irmaa_status': irmaa_status, 'networth': current_networth
+            'rmd_req': rmd_req, 'total_conv_executed': total_conv_executed, 'agi_calculated': agi_calculated,
+            'total_tax_bill': total_tax_bill, 'irmaa_alert': irmaa_alert, 'networth': networth_snapshot
         })
         
-    return current_networth, total_lifetime_taxes, ledger_logs
+    return networth_snapshot, total_lifetime_taxes, ledger_logs
 
 def execute_simulation_matrix():
     try:
         engine_mode = document.getElementById('simulation_mode').value
-        cur_age = safe_int('current_age', 62)
-        ret_age = safe_int('retirement_age', 66)
-        inflation = safe_float('inflation_rate', 0.03)
-        spending_base = safe_float('annual_spending', 95000)
-        buffer_years = safe_int('cash_buffer_years', 1)
+        cur_age = safe_int('current_age', 60)
+        ret_age = safe_int('retirement_age', 60)
+        inflation = safe_float('inflation_rate', 0.025)
+        spending_base = safe_float('annual_spending', 85000)
         filing_status = document.getElementById('filing_status').value
         strategy_input = document.getElementById('target_bracket').value
         regime_input = document.getElementById('tax_regime_mode').value
         state_tax_rate = safe_float('state_tax_rate', 4.0) / 100.0
-        pre_retire_savings = safe_float('annual_savings_contribution', 15000)
 
         force_sunset = (regime_input == "SUNSET")
 
@@ -482,24 +477,16 @@ def execute_simulation_matrix():
         a_returns = [float(i.value or 0) for i in document.querySelectorAll('.acc-return')]
 
         if engine_mode == "DETERMINISTIC":
-            brackets_to_test = [0.0, 0.10, 0.12, 0.22]
-            optimization_results = {}
-            for br in brackets_to_test:
-                nw, tx, _ = run_isolated_scenario(br, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, False)
-                optimization_results[br] = {'networth': nw, 'taxes': tx}
-                
-            best_bracket = max(optimization_results, key=lambda k: optimization_results[k]['networth'])
-            chosen_bracket_rate = best_bracket if strategy_input == "AUTO" else float(strategy_input)
-
-            diag_html = f"<strong>🤖 Sequential Optimization Matrix Status:</strong><br>"
-            for br, res in optimization_results.items():
-                b_label = f"Fill Pre-Tax {int(br*100)}% Bracket" if br > 0 else "Bypass Pre-Tax Sourcing (Roth First)"
-                diag_html += f"• {b_label} → Terminal Net Worth: <strong>${res['networth']/1000:,.1f}k</strong> | Lifetime Taxes: ${res['taxes']/1000:,.1f}k<br>"
-            diag_html += f"🏆 <strong>Cascade Sourcing Order Active:</strong> 1. Max Pre-Tax Bracket, 2. Max 0% LTCG Space, 3. Draw Roth Remaining."
+            _, final_tax, active_logs = run_isolated_scenario(strategy_input, cur_age, ret_age, inflation, spending_base, filing_status, state_tax_rate, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, False)
+            
+            terminal_nw = active_logs[-1]['networth']
+            br_label = "Max Fast Liquidation" if strategy_input == "MAX_FAST" else f"Bracket Topping Limit: {int(float(strategy_input)*100)}%"
+            
+            diag_html = f"<strong>🤖 Engine Optimization Matrix Status:</strong><br>"
+            diag_html += f"• Active Rule: <strong>{br_label}</strong> → Terminal Net Worth: <strong>${terminal_nw/1000:,.1f}k</strong> | Cumulative Lifetime Taxes: <strong>${final_tax/1000:,.1f}k</strong><br>"
+            diag_html += f"🔥 <strong>Pre-Tax Dispersal Engine Verified:</strong> Forcing all traditional accounts into Roth first via bracket-topping conversions."
             document.getElementById('optimizer-diagnostic-panel').innerHTML = diag_html
 
-            _, _, active_logs = run_isolated_scenario(chosen_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, False)
-            
             deterministic_outputs = []
             run_labels, stack_cash, stack_brokerage, stack_pretax, stack_roth = [], [], [], [], []
             
@@ -515,23 +502,23 @@ def execute_simulation_matrix():
                         <td>{row['yr']}</td><td>{row['age']}</td>
                         <td class='section-demand'>${row['realized_cash_demand']/1000:,.1f}k</td>
                         <td class='section-demand' style='color:#0284c7;'>${row['net_deficit']/1000:,.1f}k</td>
-                        <td class='section-sources'>${row['base_revenue_flow']/1000:,.1f}k</td>
-                        <td class='section-sources' style='color:#b45309; font-weight:600;'>${row['sourced_pretax_bracket']/1000:,.1f}k</td>
-                        <td class='section-sources' style='color:#0284c7;'>${row['sourced_brokerage_0pc']/1000:,.1f}k</td>
-                        <td class='section-sources' style='color:#16a34a; font-weight:bold;'>${row['sourced_roth_rest']/1000:,.1f}k</td>
-                        <td class='section-sources'>${row['sourced_cash_pool']/1000:,.1f}k</td>
+                        <td class='section-sources'>${row['fixed_floor_inflows']/1000:,.1f}k</td>
+                        <td class='section-sources' style='color:#b45309; font-weight:600;'>${row['sourced_pretax']/1000:,.1f}k</td>
+                        <td class='section-sources' style='color:#0284c7;'>${row['sourced_brokerage']/1000:,.1f}k</td>
+                        <td class='section-sources' style='color:#16a34a; font-weight:bold;'>${row['sourced_roth']/1000:,.1f}k</td>
+                        <td class='section-sources'>${row['sourced_tax_escrow']/1000:,.1f}k</td>
                         <td class='section-balances'>${row['end_c']/1000:,.1f}k</td>
                         <td class='section-balances'>${row['end_b']/1000:,.1f}k</td>
-                        <td class='section-balances' style='color:#b45309;'>${row['end_t']/1000:,.1f}k</td>
-                        <td class='section-balances' style='color:#16a34a;'>${row['end_r']/1000:,.1f}k</td>
+                        <td class='section-balances' style='color:#b45309; font-weight:bold;'>${row['end_t']/1000:,.1f}k</td>
+                        <td class='section-balances' style='color:#16a34a; font-weight:bold;'>${row['end_r']/1000:,.1f}k</td>
                         <td class='section-metrics'>${row['rmd_req']/1000:,.1f}k</td>
-                        <td class='section-metrics' style='color:#2563eb;'>${row['total_conv_made']/1000:,.1f}k</td>
-                        <td class='section-metrics'>${row['calculated_agi']/1000:,.1f}k</td>
-                        <td class='section-metrics' style='font-weight:600; color:#dc2626;'>{row['effective_tax_rate']:.1f}%</td>
-                        <td class='section-metrics'>{row['irmaa_status']}</td>
+                        <td class='section-metrics' style='color:#2563eb; font-weight:bold;'>${row['total_conv_executed']/1000:,.1f}k</td>
+                        <td class='section-metrics'>${row['agi_calculated']/1000:,.1f}k</td>
+                        <td class='section-metrics' style='font-weight:600; color:#dc2626;'>${row['total_tax_bill']/1000:,.1f}k</td>
+                        <td class='section-metrics' style='color:#b45309; font-weight:bold;'>{row['irmaa_alert']}</td>
                     </tr>
                 """)
-            document.getElementById('table-header-title').innerText = f"Granular Ledger Audit Profile (Efficient Pre-Tax Target Bracket: {int(chosen_bracket_rate*100)}%)"
+            document.getElementById('table-header-title').innerText = f"Granular Ledger Audit Profile (Strategy Input: {br_label})"
             document.getElementById('results-body').innerHTML = "".join(deterministic_outputs)
             
             window.renderChartInterface(False, json.dumps(run_labels), json.dumps(stack_cash), json.dumps(stack_brokerage), json.dumps(stack_pretax), json.dumps(stack_roth))
@@ -540,10 +527,9 @@ def execute_simulation_matrix():
             trials_count = 1000
             yearly_trajectories = {y: [] for y in range(1, 41)}
             success_count = 0
-            chosen_bracket_rate = 0.0 if strategy_input == "AUTO" else float(strategy_input)
 
             for _ in range(trials_count):
-                term_nw, _, logs = run_isolated_scenario(chosen_bracket_rate, cur_age, ret_age, inflation, spending_base, buffer_years, filing_status, state_tax_rate, pre_retire_savings, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, True)
+                term_nw, _, logs = run_isolated_scenario(strategy_input, cur_age, ret_age, inflation, spending_base, filing_status, state_tax_rate, f_names, f_starts, f_ends, f_amounts, o_types, o_ages, o_amts, a_names, a_types, a_balances, a_bases, a_returns, force_sunset, True)
                 if term_nw > 0: success_count += 1
                 for row in logs: yearly_trajectories[row['yr']].append(row['networth'])
 
@@ -568,22 +554,22 @@ def execute_simulation_matrix():
                         <td colspan='3' style='text-align:center; background:#fef2f2;'>${p10/1000:,.1f}k</td>
                         <td colspan='4' style='text-align:center; background:#f0fdf4; font-weight:bold;'>${p50/1000:,.1f}k</td>
                         <td colspan='4' style='text-align:center; background:#eff6ff;'>${p90/1000:,.1f}k</td>
-                        <td colspan='5' style='text-align:center; color:#64748b;'>Aggregated across 1,000 paths</td>
+                        <td colspan='5' style='text-align:center; color:#64748b;'>Aggregated across 1,000 Stochastic Timelines</td>
                     </tr>
                 """)
 
             prob_of_success = (success_count / trials_count) * 100
-            diag_html = f"<strong>🎲 Monte Carlo Complete:</strong> analyzed 1,000 risk tracks.<br>"
-            diag_html += f"🏁 <strong>Probability of Success: {prob_of_success:.1f}%</strong> under combined efficient bracket cascade rules.<br>"
+            diag_html = f"<strong>🎲 Monte Carlo Tracking Matrix Implemented:</strong> Executed 1,000 volatile paths.<br>"
+            diag_html += f"🏁 <strong>Probability of Portfolio Longevity Plan: {prob_of_success:.1f}%</strong> tracking target Pre-Tax conversion targets."
             document.getElementById('optimizer-diagnostic-panel').innerHTML = diag_html
             
-            document.getElementById('table-header-title').innerText = f"Stochastic Risk Profile Matrix Ledger (Success Prob: {prob_of_success:.1f}%)"
+            document.getElementById('table-header-title').innerText = f"Stochastic Dispersal Risk Profile Matrix (Longevity Prob: {prob_of_success:.1f}%)"
             document.getElementById('results-body').innerHTML = "".join(stochastic_outputs)
 
             window.renderChartInterface(True, json.dumps(run_labels), json.dumps(p10_series), json.dumps(p50_series), json.dumps(p90_series), "[]")
 
     except Exception as e:
-        window.alert(f"Processing Engine Matrix Exception: {str(e)}")
+        window.alert(f"Execution Halt Matrix Exception: {str(e)}")
 
 window.execute_simulation_matrix = execute_simulation_matrix
 </script>
@@ -596,45 +582,45 @@ function toggleModeUI() {
         tableHead.innerHTML = `
             <tr>
                 <th colspan="2">Timeline</th>
-                <th colspan="3" style="background:#fef2f2; color:#991b1b;">10th Percentile (Downside Risk)</th>
-                <th colspan="4" style="background:#f0fdf4; color:#166534;">50th Percentile (Median Path)</th>
-                <th colspan="4" style="background:#eff6ff; color:#1e40af;">90th Percentile (Upside Potential)</th>
-                <th colspan="5">Stochastic Diagnostics</th>
+                <th colspan="3" style="background:#fef2f2; color:#991b1b;">10th Percentile (Plan Floor)</th>
+                <th colspan="4" style="background:#f0fdf4; color:#166534;">50th Percentile (Median Base)</th>
+                <th colspan="4" style="background:#eff6ff; color:#1e40af;">90th Percentile (Plan Ceiling)</th>
+                <th colspan="5">Diagnostics</th>
             </tr>
             <tr>
                 <th>Yr</th><th>Age</th>
-                <th colspan="3" style="background:#fef2f2;">Net Worth ($K)</th>
-                <th colspan="4" style="background:#f0fdf4;">Net Worth ($K)</th>
-                <th colspan="4" style="background:#eff6ff;">Net Worth ($K)</th>
-                <th colspan="5">Engine Track</th>
+                <th colspan="3" style="background:#fef2f2;">Net Worth Target ($K)</th>
+                <th colspan="4" style="background:#f0fdf4;">Net Worth Target ($K)</th>
+                <th colspan="4" style="background:#eff6ff;">Net Worth Target ($K)</th>
+                <th colspan="5">Stochastic Core Output</th>
             </tr>`;
     } else {
         tableHead.innerHTML = `
             <tr>
                 <th colspan="2">Timeline</th>
-                <th colspan="2" class="section-demand">Needs ($K)</th>
-                <th colspan="5" class="section-sources">Sequential Tax Draw Cascade ($K)</th>
-                <th colspan="4" class="section-balances">Year-End Wrappers ($K)</th>
-                <th colspan="5" class="section-metrics">Tax Optimization Metrics & Surcharges</th>
+                <th colspan="2" class="section-demand">Livelihood Budgets ($K)</th>
+                <th colspan="5" class="section-sources">Drawdown Sourcing & Mandatory Conversions Cascade ($K)</th>
+                <th colspan="4" class="section-balances">Year-End Portfolio Breakdown ($K)</th>
+                <th colspan="5" class="section-metrics">Tax Framework Engine Outlays</th>
             </tr>
             <tr>
                 <th>Yr</th><th>Age</th>
-                <th class="section-demand">Gross</th><th class="section-demand">Deficit</th>
-                <th class="section-sources">Floor+RMD</th><th class="section-sources">1. PreTax Eff. Draw</th><th class="section-sources">2. 0% LTCG Brok</th><th class="section-sources">3. Roth (Rest)</th><th class="section-sources">Liquid Cash Pool</th>
-                <th class="section-balances">Cash</th><th class="section-balances">Brok</th><th class="section-balances">PreTax</th><th class="section-balances">Roth</th>
-                <th class="section-metrics">RMD</th><th class="section-metrics">Conv.</th><th class="section-metrics">AGI</th><th class="section-metrics">Eff Tax %</th><th class="section-metrics">IRMAA</th>
+                <th class="section-demand">Budget Need</th><th class="section-demand">Deficit</th>
+                <th class="section-sources">Fixed Floors</th><th class="section-sources">1. Mandatory Pre-Tax Dispersal</th><th class="section-sources">2. Brokerage (0% CapGains)</th><th class="section-sources">3. Roth Cushion</th><th class="section-sources">Outside Tax Escrow Pool</th>
+                <th class="section-balances">Cash Balance</th><th class="section-balances">Brokerage</th><th class="section-balances">Pre-Tax Bal</th><th class="section-balances">Roth Balance</th>
+                <th class="section-metrics">RMD Hit</th><th class="section-metrics">Executed Conv.</th><th class="section-metrics">Total AGI</th><th class="section-metrics">Calculated Tax Bill</th><th class="section-metrics">IRMAA Risk</th>
             </tr>`;
     }
 }
 
 function addFloorRow() {
-    document.getElementById('income-floor-body').insertAdjacentHTML('beforeend', `<tr><td class="txt-left"><input type="text" class="floor-name" value="Annuity / Inflow"></td><td><input type="number" class="floor-start" value="65"></td><td><input type="number" class="floor-end" value="95"></td><td><input type="number" class="floor-amount" value="12000"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
+    document.getElementById('income-floor-body').insertAdjacentHTML('beforeend', `<tr><td class="txt-left"><input type="text" class="floor-name" value="Annuity / Pension"></td><td><input type="number" class="floor-start" value="65"></td><td><input type="number" class="floor-end" value="95"></td><td><input type="number" class="floor-amount" value="15000"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
 }
 function addOutlayRow() {
-    document.getElementById('outlays-body').insertAdjacentHTML('beforeend', `<tr><td><select class="outlay-type"><option value="Outlay">Outlay Shock</option><option value="Conversion">Roth Conv Event</option></select></td><td><input type="number" class="outlay-age" value="70"></td><td><input type="number" class="outlay-amount" value="25000"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
+    document.getElementById('outlays-body').insertAdjacentHTML('beforeend', `<tr><td><select class="outlay-type"><option value="Outlay">Outlay Capital Shock</option></select></td><td><input type="number" class="outlay-age" value="65"></td><td><input type="number" class="outlay-amount" value="30000"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
 }
 function addAccountRow() {
-    document.getElementById('accounts-body').insertAdjacentHTML('beforeend', `<tr><td class="txt-left"><input type="text" class="acc-name" value="New Asset Port"></td><td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash</option></select></td><td><input type="number" class="acc-balance" value="100000"></td><td><input type="number" class="acc-basis" value="100000"></td><td><input type="number" class="acc-return" step="0.01" value="0.06"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
+    document.getElementById('accounts-body').insertAdjacentHTML('beforeend', `<tr><td class="txt-left"><input type="text" class="acc-name" value="Taxable Account Plus"></td><td><select class="acc-type"><option value="Traditional">Traditional (Pre-Tax)</option><option value="Roth">Roth</option><option value="Brokerage" selected>Taxable Brokerage</option><option value="Cash">Cash</option></select></td><td><input type="number" class="acc-balance" value="50000"></td><td><input type="number" class="acc-basis" value="50000"></td><td><input type="number" class="acc-return" step="0.01" value="0.06"></td><td><button onclick="this.parentElement.parentElement.remove()">X</button></td></tr>`);
 }
 
 let activeChartInstance = null;
@@ -647,16 +633,16 @@ window.renderChartInterface = function(isStochastic, labelsJs, track1, track2, t
 
     if (isStochastic) {
         datasets = [
-            { label: '🔴 10th Percentile (Downside Risk)', data: JSON.parse(track1), borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.08)', fill: false, borderDash: [4, 4], tension: 0.1, pointRadius: 0 },
-            { label: '🟢 50th Percentile (Median Outlook)', data: JSON.parse(track2), borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.1)', fill: false, borderWidth: 3, tension: 0.1, pointRadius: 0 },
-            { label: '🔵 90th Percentile (Optimistic Growth)', data: JSON.parse(track3), borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', fill: false, borderDash: [4, 4], tension: 0.1, pointRadius: 0 }
+            { label: '🔴 10th Percentile Downside Bound', data: JSON.parse(track1), borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.08)', fill: false, borderDash: [4, 4], tension: 0.1, pointRadius: 0 },
+            { label: '🟢 50th Percentile Median Path', data: JSON.parse(track2), borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.1)', fill: false, borderWidth: 3, tension: 0.1, pointRadius: 0 },
+            { label: '🔵 90th Percentile Aggressive Growth', data: JSON.parse(track3), borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', fill: false, borderDash: [4, 4], tension: 0.1, pointRadius: 0 }
         ];
     } else {
         datasets = [
-            { label: '🟪 Liquid Cash Cushion Pool', data: JSON.parse(track1), borderColor: '#9333ea', backgroundColor: 'rgba(147, 51, 234, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
-            { label: '🟦 Taxable Brokerage (0% LTCG Shield)', data: JSON.parse(track2), borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
-            { label: '🟨 Pre-Tax Traditional IRA', data: JSON.parse(track3), borderColor: '#d97706', backgroundColor: 'rgba(217, 119, 6, 0.6)', fill: true, tension: 0.1, pointRadius: 0 },
-            { label: '🟩 Tax-Free Large Roth', data: JSON.parse(track4), borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.6)', fill: true, tension: 0.1, pointRadius: 0 }
+            { label: '🟪 Outside Cash Tax Liquidity Pool', data: JSON.parse(track1), borderColor: '#9333ea', backgroundColor: 'rgba(147, 51, 234, 0.55)', fill: true, tension: 0.1, pointRadius: 0 },
+            { label: '🟦 Taxable Brokerage Portfolio Escrow', data: JSON.parse(track2), borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.55)', fill: true, tension: 0.1, pointRadius: 0 },
+            { label: '🟨 Target Pre-Tax Traditional Vault', data: JSON.parse(track3), borderColor: '#d97706', backgroundColor: 'rgba(217, 119, 6, 0.55)', fill: true, tension: 0.1, pointRadius: 0 },
+            { label: '🟩 Permanent Tax-Free Roth Compounder', data: JSON.parse(track4), borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.55)', fill: true, tension: 0.1, pointRadius: 0 }
         ];
     }
     
@@ -666,7 +652,7 @@ window.renderChartInterface = function(isStochastic, labelsJs, track1, track2, t
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { labels: { boxWidth: 10, font: { size: 9 } } } },
+            plugins: { legend: { labels: { boxWidth: 12, font: { size: 10 } } } },
             scales: {
                 x: { stacked: !isStochastic },
                 y: { stacked: !isStochastic, ticks: { callback: function(value) { return '$' + (value/1000).toFixed(0) + 'k'; } } }
@@ -683,26 +669,24 @@ function saveToBrowserStorage() {
         retirement_age: document.getElementById('retirement_age').value,
         inflation_rate: document.getElementById('inflation_rate').value,
         annual_spending: document.getElementById('annual_spending').value,
-        cash_buffer_years: document.getElementById('cash_buffer_years').value,
         filing_status: document.getElementById('filing_status').value,
         tax_regime_mode: document.getElementById('tax_regime_mode').value,
         target_bracket: document.getElementById('target_bracket').value,
-        state_tax_rate: document.getElementById('state_tax_rate').value,
-        annual_savings_contribution: document.getElementById('annual_savings_contribution').value
+        state_tax_rate: document.getElementById('state_tax_rate').value
     };
-    localStorage.setItem('retirement_matrix_v20_data', JSON.stringify(data));
-    alert('Configuration parameters saved successfully!');
+    localStorage.setItem('retirement_matrix_v21_data', JSON.stringify(data));
+    alert('Matrix configurations localized to browser engine cache.');
 }
 
 function loadFromBrowserStorage() {
-    const raw = localStorage.getItem('retirement_matrix_v20_data');
-    if(!raw) { alert('No configuration history detected in browser engine cache.'); return; }
+    const raw = localStorage.getItem('retirement_matrix_v21_data');
+    if(!raw) { alert('No configuration metrics trace found in native browser database.'); return; }
     const data = JSON.parse(raw);
     for(let key in data) {
         const el = document.getElementById(key);
         if(el) el.value = data[key];
     }
-    alert('Configuration context successfully loaded.');
+    alert('Matrix engine states initialized from cached parameters.');
 }
 </script>
 </body>
