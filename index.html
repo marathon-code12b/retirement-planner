@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v3.1</title>
+    <title>Retirement Matrix Engine v3.5</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -31,12 +31,14 @@
         .hdr p{font-size:11px;color:var(--muted);}
         #diag{margin-left:auto;background:#0d2b1a;border:1px solid #1a4a2e;color:var(--green);font-size:11px;padding:4px 10px;border-radius:20px;font-family:'IBM Plex Mono',monospace;max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-        /* LAYOUT */
+        /* LAYOUT (RESTRUCTURED FOR TOP-DOMINANT TABLES) */
         .layout{display:grid;grid-template-columns:288px 1fr;height:calc(100vh - 45px);}
         .sidebar{border-right:1px solid var(--border);overflow-y:auto;background:var(--surface);}
-        .main{display:flex;flex-direction:column;overflow:hidden;}
+        
+        /* Flex Column directing workspace flow to Table first, Chart second */
+        .main{display:flex;flex-direction:column;overflow-y:auto;height:100%;}
 
-        /* SIDEBAR */
+        /* SIDEBAR COMPONENTS */
         .sb{padding:10px 12px;}
         .slabel{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;}
         label{display:block;font-size:10px;color:var(--muted);margin-bottom:2px;margin-top:5px;}
@@ -52,15 +54,30 @@
         .btn{background:var(--accent);color:#0d1117;border:none;padding:4px 9px;border-radius:3px;cursor:pointer;font-weight:700;font-size:11px;margin-top:5px;}
         .btn:hover{opacity:.85;}
         .bdel{background:var(--red);color:#fff;padding:1px 5px;font-size:10px;margin:0;border:none;border-radius:2px;cursor:pointer;}
-        .brun{background:var(--green);color:#0d1117;width:100%;padding:8px;font-size:13px;letter-spacing:.05em;margin-top:10px;border-radius:5px;border:none;cursor:pointer;font-weight:700;}
-        .brun:hover{opacity:.9;}
+        
+        /* Prominent Action Interface at Top of Controls */
+        .brun{background:var(--green);color:#0d1117;width:100%;padding:10px;font-size:13px;letter-spacing:.05em;margin-bottom:12px;border-radius:5px;border:none;cursor:pointer;font-weight:700;box-shadow:0 0 10px rgba(63,185,80,0.15);}
+        .brun:hover{opacity:.9;transform:scale(0.99);}
 
-        /* CHART AREA */
-        .chart-area{flex:1;display:flex;flex-direction:column;padding:10px 14px 6px;overflow:hidden;min-height:0;}
-        .ctrls{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:6px;}
-        .ctrls select{width:auto;}
+        /* TOP WORKSPACE: RESTRUCTURED LEDGER INTERFACE */
+        .ledger-container-top {background:var(--bg);border-bottom:1px solid var(--border);display:flex;flex-direction:column;max-height:45%;flex-shrink:0;}
+        .lstrip{background:var(--surface);border-bottom:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;}
+        .slbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-right:2px;}
+        .ctog{padding:2px 8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);border-radius:3px;cursor:pointer;font-size:10px;transition:all .15s;white-space:nowrap;}
+        .ctog.active{border-color:var(--accent);color:var(--accent);}
+        .ctog:hover{border-color:var(--muted);color:var(--text);}
+        
+        .ledger{overflow:auto;flex:1;}
+        .ledger table{width:100%;border-collapse:collapse;font-size:11px;font-family:'IBM Plex Mono',monospace;}
+        .ledger th{background:var(--surface);color:var(--muted);padding:4px 7px;border:1px solid var(--border);text-align:right;font-size:10px;font-weight:600;white-space:nowrap;position:sticky;top:0;z-index:2;}
+        .ledger td{padding:3px 7px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;}
+        .ledger tr:hover td{background:var(--surface2);}
+        .ledger .tl{text-align:left;}
+
+        /* BOTTOM WORKSPACE: ANALYTICAL GRAPH */
+        .chart-area{flex:1;display:flex;flex-direction:column;padding:10px 14px 6px;overflow:hidden;background:var(--surface2);}
         .view-tabs{display:flex;gap:3px;flex-wrap:wrap;}
-        .vtab{padding:3px 9px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);border-radius:3px;cursor:pointer;font-size:11px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;transition:all .15s;}
+        .vtab{padding:3px 9px;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:3px;cursor:pointer;font-size:11px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;transition:all .15s;}
         .vtab:hover{border-color:var(--muted);color:var(--text);}
         .vtab.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700;}
         .vtab.grp-asset.active{background:var(--green);border-color:var(--green);}
@@ -68,26 +85,11 @@
         .vtab.grp-flow.active{background:var(--cyan);border-color:var(--cyan);color:#0d1117;}
         .vtab.grp-draw.active{background:var(--purple);border-color:var(--purple);}
         .time-row{display:flex;gap:3px;margin-top:5px;}
-        .tbtn{padding:2px 9px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);border-radius:3px;cursor:pointer;font-size:10px;font-family:'IBM Plex Mono',monospace;transition:all .15s;}
+        .tbtn{padding:2px 9px;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:3px;cursor:pointer;font-size:10px;font-family:'IBM Plex Mono',monospace;transition:all .15s;}
         .tbtn:hover{border-color:var(--accent);color:var(--accent);}
         .tbtn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700;}
         .chart-wrap{flex:1;position:relative;min-height:0;}
 
-        /* LEDGER STRIP */
-        .lstrip{background:var(--surface);border-top:1px solid var(--border);padding:5px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;}
-        .slbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-right:2px;}
-        .ctog{padding:2px 8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);border-radius:3px;cursor:pointer;font-size:10px;transition:all .15s;white-space:nowrap;}
-        .ctog.active{border-color:var(--accent);color:var(--accent);}
-        .ctog:hover{border-color:var(--muted);color:var(--text);}
-
-        /* LEDGER */
-        .ledger{background:var(--bg);border-top:1px solid var(--border);overflow:auto;max-height:220px;transition:max-height .3s;flex-shrink:0;}
-        .ledger.hide{max-height:0;overflow:hidden;}
-        .ledger table{width:100%;border-collapse:collapse;font-size:11px;font-family:'IBM Plex Mono',monospace;}
-        .ledger th{background:var(--surface);color:var(--muted);padding:4px 7px;border:1px solid var(--border);text-align:right;font-size:10px;font-weight:600;white-space:nowrap;position:sticky;top:0;z-index:2;}
-        .ledger td{padding:3px 7px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;}
-        .ledger tr:hover td{background:var(--surface2);}
-        .ledger .tl{text-align:left;}
         .c-muted{color:var(--muted);}
         .c-cyan{color:var(--cyan);}
         .c-amber{color:var(--amber);}
@@ -95,17 +97,12 @@
         .c-red{color:var(--red);}
         .c-purple{color:var(--purple);}
         .c-orange{color:var(--orange);}
-        .grp-budget,.grp-sources,.grp-balances,.grp-taxes{transition:none;}
-        .hide-budget .grp-budget,.hide-sources .grp-sources,.hide-balances .grp-balances,.hide-taxes .grp-taxes{display:none;}
+        .hide-budget .grp-budget, .hide-sources .grp-sources, .hide-balances .grp-balances, .hide-taxes .grp-taxes{display:none;}
 
-        /* MOBILE */
-        @media(max-width:680px){
-            .layout{grid-template-columns:1fr;height:auto;}
-            .sidebar{max-height:45vh;border-right:none;border-bottom:1px solid var(--border);}
-            .main{height:auto;}
-            .chart-area{min-height:280px;}
-            #diag{max-width:100%;margin-left:0;margin-top:4px;}
-            .hdr{flex-direction:column;align-items:flex-start;}
+        @media(max-width:950px){
+            .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr;}
+            .sidebar{border-right:none;border-bottom:1px solid var(--border);max-height:350px;}
+            .ledger-container-top{max-height:300px;}
         }
         ::-webkit-scrollbar{width:4px;height:4px;}
         ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
@@ -114,17 +111,19 @@
 <body>
 
 <div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v3.1</h1><p>Deterministic &amp; Monte Carlo · Roth conversion optimizer · Tax analytics</p></div>
-    <div id="diag">Ready — configure and run simulation.</div>
+    <div><h1>⚡ RETIREMENT MATRIX ENGINE v3.5</h1><p>Top-Down Ledger Matrix Workspace · Dynamic Conversion Engine</p></div>
+    <div id="diag">Configuration idle — execute simulation logic to render arrays.</div>
 </div>
 
 <div class="layout">
 
 <div class="sidebar"><div class="sb">
 
-    <div class="slabel">Engine</div>
+    <button class="brun" onclick="triggerEngine()">⚡ RUN INTEGRATED MATRIX</button>
+
+    <div class="slabel">Simulation Mode</div>
     <div class="g2">
-        <div><label>Mode</label>
+        <div><label>Calculation</label>
             <select id="simulation_mode" onchange="toggleModeUI()">
                 <option value="DETERMINISTIC" selected>Deterministic</option>
                 <option value="STOCHASTIC">Monte Carlo (1k)</option>
@@ -138,61 +137,63 @@
         </div>
     </div>
 
-    <div class="slabel" style="margin-top:8px">Timeline</div>
+    <div class="slabel" style="margin-top:8px">Timeline Horizon</div>
     <div class="g3">
         <div><label>Current Age</label><input type="number" id="current_age" value="60"></div>
         <div><label>Retire Age</label><input type="number" id="retirement_age" value="65"></div>
-        <div><label>Project To Age</label><input type="number" id="projection_end_age" value="95" min="70" max="110"></div>
+        <div><label>Project To</label><input type="number" id="projection_end_age" value="95" min="70" max="110"></div>
     </div>
 
     <div class="slabel" style="margin-top:8px">Spending &amp; Inflation</div>
     <div class="g2">
-        <div><label>Annual Budget ($)</label><input type="number" id="annual_spending" value="85000"></div>
+        <div><label>Base Budget ($)</label><input type="number" id="annual_spending" value="85000"></div>
         <div><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.001" value="0.025"></div>
     </div>
 
-    <div class="slabel" style="margin-top:8px">Tax Settings</div>
+    <div class="slabel" style="margin-top:8px">Tax Strategy &amp; Higher Brackets</div>
     <div class="g2">
-        <div><label>Roth Conv Target</label>
+        <div><label>Conversion Ceiling</label>
             <select id="target_bracket">
-                <option value="0.12">Top 12%/15%</option>
-                <option value="0.22" selected>Top 22%/25%</option>
-                <option value="0.24">Top 24%/28%</option>
-                <option value="MAX_FAST">Max Fast Liq.</option>
+                <option value="0.12">Top 12% / 15%</option>
+                <option value="0.22" selected>Top 22% / 25%</option>
+                <option value="0.24">Top 24% / 28%</option>
+                <option value="0.32">Top 32% (Aggressive)</option>
+                <option value="0.35">Top 35% (Max Mitigate)</option>
+                <option value="MAX_FAST">Max Fast Liquidate</option>
             </select>
         </div>
-        <div><label>Tax Sunset Rule</label>
+        <div><label>Tax Sunsetting</label>
             <select id="tax_regime_mode">
-                <option value="CURRENT">Keep TCJA</option>
-                <option value="SUNSET" selected>2026 Sunset</option>
+                <option value="CURRENT">Freeze TCJA Rates</option>
+                <option value="SUNSET" selected>2026 TCJA Sunset</option>
             </select>
         </div>
     </div>
     <div><label>State Income Tax (%)</label><input type="number" id="state_tax_rate" step="0.1" value="4.0" style="width:48%"></div>
 
-    <div class="slabel" style="margin-top:8px">Income Floors</div>
+    <div class="slabel" style="margin-top:8px">Guaranteed Income Floors</div>
     <table class="mt"><thead>
         <tr><th class="tl">Source</th><th>Start</th><th>End</th><th>$/yr</th><th></th></tr>
     </thead><tbody id="income-floor-body">
         <tr>
-            <td class="tl"><input type="text" class="floor-name" value="Soc. Security"></td>
+            <td class="tl"><input type="text" class="floor-name" value="Social Security"></td>
             <td><input type="number" class="floor-start" value="67"></td>
             <td><input type="number" class="floor-end" value="95"></td>
             <td><input type="number" class="floor-amount" value="45000"></td>
             <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
         </tr>
     </tbody></table>
-    <button class="btn" onclick="addFloorRow()">+ Floor</button>
+    <button class="btn" onclick="addFloorRow()">+ Income Floor</button>
 
     <div class="slabel" style="margin-top:8px">Capital Shocks</div>
     <table class="mt"><thead>
         <tr><th>Type</th><th>Age</th><th>Amount</th><th></th></tr>
     </thead><tbody id="outlays-body"></tbody></table>
-    <button class="btn" onclick="addOutlayRow()">+ Shock</button>
+    <button class="btn" onclick="addOutlayRow()">+ Shock Outlay</button>
 
-    <div class="slabel" style="margin-top:8px">Asset Containers</div>
+    <div class="slabel" style="margin-top:8px">Asset Capitalization Containers</div>
     <table class="mt"><thead>
-        <tr><th class="tl">Label</th><th>Type</th><th>Balance</th><th>Return</th><th></th></tr>
+        <tr><th class="tl">Label</th><th>Type</th><th>Balance</th><th>Growth</th><th></th></tr>
     </thead><tbody id="accounts-body">
         <tr>
             <td class="tl"><input type="text" class="acc-name" value="Pre-Tax IRA"></td>
@@ -202,75 +203,87 @@
                 <option value="Brokerage">Brokerage</option>
                 <option value="Cash">Cash</option>
             </select></td>
-            <td><input type="number" class="acc-balance" value="1250000"></td>
+            <td><input type="number" class="acc-balance" value="1450000"></td>
             <td><input type="number" class="acc-return" step="0.01" value="0.065"></td>
             <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
         </tr>
+        <tr>
+            <td class="tl"><input type="text" class="acc-name" value="Taxable Brokerage"></td>
+            <td><select class="acc-type">
+                <option value="Traditional">Traditional</option>
+                <option value="Roth">Roth</option>
+                <option value="Brokerage" selected>Brokerage</option>
+                <option value="Cash">Cash</option>
+            </select></td>
+            <td><input type="number" class="acc-balance" value="300000"></td>
+            <td><input type="number" class="acc-return" step="0.01" value="0.060"></td>
+            <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
+        </tr>
     </tbody></table>
-    <button class="btn" onclick="addAccountRow()">+ Account</button>
-
-    <button class="brun" onclick="triggerEngine()">⚡ RUN SIMULATION</button>
+    <button class="btn" onclick="addAccountRow()">+ Asset Container</button>
 
 </div></div>
 
 <div class="main">
 
+    <div class="ledger-container-top">
+        <div class="lstrip">
+            <span class="slbl">Ledger Controls</span>
+            <span class="slbl" style="margin-left:12px; color:var(--muted)">Toggle System Columns:</span>
+            <button class="ctog active" id="tog-budget" onclick="toggleCol('budget')">Required Need</button>
+            <button class="ctog active" id="tog-sources" onclick="toggleCol('sources')">Distribution Engine</button>
+            <button class="ctog active" id="tog-balances" onclick="toggleCol('balances')">Asset Tracking</button>
+            <button class="ctog active" id="tog-taxes" onclick="toggleCol('taxes')">IRS Tax Ledger</button>
+        </div>
+
+        <div class="ledger" id="ledger">
+            <table>
+                <thead id="ledger-head">
+                    <tr>
+                        <th class="tl">Yr</th><th>Age</th>
+                        <th class="grp-budget c-cyan">Gross Need</th><th class="grp-budget c-cyan">Portfolio Deficit</th>
+                        <th class="grp-sources c-amber">Income Floors</th><th class="grp-sources c-amber">PreTax Out</th><th class="grp-sources">Brokerage Out</th><th class="grp-sources c-green">Roth Out</th><th class="grp-sources c-red">Tax Settle</th>
+                        <th class="grp-balances">Cash Liq</th><th class="grp-balances">Brokerage Portfolio</th><th class="grp-balances c-amber">PreTax Account</th><th class="grp-balances c-green">Roth Account</th>
+                        <th class="grp-taxes c-orange">Age RMD</th><th class="grp-taxes c-purple">Executed Conv.</th><th class="grp-taxes c-muted">Adjusted AGI</th><th class="grp-taxes c-red">Calculated Tax</th><th class="grp-taxes c-amber">Eff %</th><th class="grp-taxes">IRMAA</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body">
+                    <tr><td colspan="19" class="tl c-muted" style="padding:20px; text-align:center;">Configure data arrays and click "Run Integrated Matrix" to initialize spreadsheet engines.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="chart-area">
         <div class="view-tabs" id="view-tabs">
-            <span style="font-size:10px;color:var(--muted);align-self:center;margin-right:2px;">ASSETS:</span>
-            <button class="vtab grp-asset active" data-view="NET_WORTH">Net Worth</button>
-            <button class="vtab grp-asset" data-view="STACKED">By Account</button>
-            <button class="vtab grp-asset" data-view="CASH">Cash</button>
-            <button class="vtab grp-asset" data-view="BROKERAGE">Brokerage</button>
-            <button class="vtab grp-asset" data-view="PRETAX">Pre-Tax</button>
-            <button class="vtab grp-asset" data-view="ROTH">Roth</button>
-            <span style="font-size:10px;color:var(--muted);align-self:center;margin-left:4px;margin-right:2px;">FLOW:</span>
-            <button class="vtab grp-flow" data-view="INCOME_VS_SPEND">Income vs Spend</button>
-            <button class="vtab grp-flow" data-view="SURPLUS">Surplus / Deficit</button>
-            <span style="font-size:10px;color:var(--muted);align-self:center;margin-left:4px;margin-right:2px;">DRAW:</span>
-            <button class="vtab grp-draw" data-view="WITHDRAWAL">Withdrawal Sources</button>
-            <button class="vtab grp-draw" data-view="RMD_CONV">RMD + Conversions</button>
-            <span style="font-size:10px;color:var(--muted);align-self:center;margin-left:4px;margin-right:2px;">TAX:</span>
-            <button class="vtab grp-tax" data-view="TAX_STACK">Tax Bill + AGI</button>
-            <button class="vtab grp-tax" data-view="EFF_RATE">Effective Rate</button>
-            <button class="vtab grp-tax" data-view="IRMAA_AGI">IRMAA Threshold</button>
+            <span style="font-size:10px;color:var(--muted);align-self:center;margin-right:4px;">ASSET HORIZON:</span>
+            <button class="vtab grp-asset active" data-view="NET_WORTH">Aggregated Net Worth</button>
+            <button class="vtab grp-asset" data-view="STACKED">Stratified Containers</button>
+            <button class="vtab grp-asset" data-view="PRETAX">Pre-Tax Growth Decay</button>
+            <button class="vtab grp-asset" data-view="ROTH">Roth Accumulation</button>
+            <span style="font-size:10px;color:var(--muted);align-self:center;margin-left:8px;margin-right:4px;">CASH FLOWS:</span>
+            <button class="vtab grp-flow" data-view="INCOME_VS_SPEND">Inflows vs Budget Needs</button>
+            <button class="vtab grp-flow" data-view="WITHDRAWAL">Distribution Drawdown Stack</button>
+            <button class="vtab grp-flow" data-view="RMD_CONV">RMD vs Roth Conversion</button>
+            <span style="font-size:10px;color:var(--muted);align-self:center;margin-left:8px;margin-right:4px;">TAX LIABILITY:</span>
+            <button class="vtab grp-tax" data-view="TAX_STACK">AGI Vector vs Tax Settle</button>
+            <button class="vtab grp-tax" data-view="EFF_RATE">Effective Rate Trend</button>
+            <button class="vtab grp-tax" data-view="IRMAA_AGI">IRMAA Clip Surcharges</button>
         </div>
         <div class="time-row" id="time-row">
-            <button class="tbtn" onclick="setWindow(5)">5Y</button>
-            <button class="tbtn" onclick="setWindow(10)">10Y</button>
-            <button class="tbtn" onclick="setWindow(15)">15Y</button>
-            <button class="tbtn" onclick="setWindow(20)">20Y</button>
-            <button class="tbtn active" onclick="setWindow(null)">ALL</button>
+            <button class="tbtn" onclick="setWindow(5)">5-Year window</button>
+            <button class="tbtn" onclick="setWindow(10)">10-Year window</button>
+            <button class="tbtn" onclick="setWindow(15)">15-Year window</button>
+            <button class="tbtn" onclick="setWindow(20)">20-Year window</button>
+            <button class="tbtn active" onclick="setWindow(null)">Full Projection Lifetime</button>
         </div>
         <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
     </div>
 
-    <div class="lstrip">
-        <span class="slbl">Ledger</span>
-        <button class="ctog active" id="tog-ledger" onclick="toggleLedger()">▼ Show</button>
-        <span class="slbl" style="margin-left:6px">Columns</span>
-        <button class="ctog active" id="tog-budget" onclick="toggleCol('budget')">Budget</button>
-        <button class="ctog active" id="tog-sources" onclick="toggleCol('sources')">Sources</button>
-        <button class="ctog active" id="tog-balances" onclick="toggleCol('balances')">Balances</button>
-        <button class="ctog active" id="tog-taxes" onclick="toggleCol('taxes')">Taxes</button>
-    </div>
+</div>
+</div>
 
-    <div class="ledger hide" id="ledger">
-        <table>
-            <thead id="ledger-head">
-                <tr>
-                    <th class="tl">Yr</th><th>Age</th>
-                    <th class="grp-budget c-cyan">Need(k)</th><th class="grp-budget c-cyan">Deficit(k)</th>
-                    <th class="grp-sources c-amber">Floors(k)</th><th class="grp-sources c-amber">PreTax(k)</th><th class="grp-sources c-amber">Brokerage(k)</th><th class="grp-sources c-amber">Roth(k)</th><th class="grp-sources c-red">TaxPaid(k)</th>
-                    <th class="grp-balances c-green">Cash(k)</th><th class="grp-balances c-green">Broker(k)</th><th class="grp-balances c-green">PreTax(k)</th><th class="grp-balances c-green">Roth(k)</th>
-                    <th class="grp-taxes c-orange">RMD(k)</th><th class="grp-taxes c-purple">Conv(k)</th><th class="grp-taxes c-muted">AGI(k)</th><th class="grp-taxes c-red">Tax$(k)</th><th class="grp-taxes c-amber">Eff%</th><th class="grp-taxes">IRMAA</th>
-                </tr>
-            </thead>
-            <tbody id="results-body"></tbody>
-        </table>
-    </div>
-
-</div></div><script type="text/python">
+<script type="text/python">
 import js, json
 from js import document, window
 
@@ -285,11 +298,12 @@ def fk(v): return f"${v/1000:,.0f}k"
 def brackets(status, sunset, yr):
     s = sunset and yr>=1
     if status=="MFJ":
-        return ([15100,61300,123700,188450,336550,400000],[.10,.15,.25,.28,.33,.35,.396],29200) if s else \
-               ([23200,94300,201050,383900,487450,731200],[.10,.12,.22,.24,.32,.35,.37],29200)
+        # Full 2026 Extended Statutory Brackets
+        return ([15100,61300,123700,188450,336550,400000,600000],[.10,.15,.25,.28,.33,.35,.36,.396],29200) if s else \
+               ([23200,94300,201050,383900,487450,731200,900000],[.10,.12,.22,.24,.32,.35,.35,.37],29200)
     else:
-        return ([7550,30650,74200,154800,336550,400000],[.10,.15,.25,.28,.33,.35,.396],14600) if s else \
-               ([11600,47150,100525,191950,243725,609350],[.10,.12,.22,.24,.32,.35,.37],14600)
+        return ([7550,30650,74200,154800,336550,400000,500000],[.10,.15,.25,.28,.33,.35,.36,.396],14600) if s else \
+               ([11600,47150,100525,191950,243725,609350,700000],[.10,.12,.22,.24,.32,.35,.35,.37],14600)
 
 def tax_calc(agi, status, sunset, yr, srate):
     bkts,rates,ded = brackets(status,sunset,yr)
@@ -330,7 +344,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
         deficit=max(0.0,demand-floors)
 
-        # RMD
+        # Process Required Minimum Distributions
         rmd=0.0
         f=rmd_factor(age)
         if f>0 and tr>0: rmd=min(tr,tr/f)
@@ -339,7 +353,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         rem=deficit-rmd
         if rem<0: c+=abs(rem); rem=0.0
 
-        # Cascade
+        # Liquidate via Account Hierarchy Cascade
         if rem>0:
             d=min(bk,rem); sp_bk=d; bk-=d; rem-=d
         if rem>0:
@@ -347,7 +361,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if rem>0:
             d=min(ro,rem); sp_ro=d; ro-=d; rem-=d
 
-        # Roth conversion
+        # Dynamic Roth Conversion Bracket Optimizer (Handles 12% through 35%)
         conv=0.0
         bkts,rates,ded=brackets(status,sunset,yr)
         if strategy!="MAX_FAST" and tr>0:
@@ -366,14 +380,15 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         total_tax+=bill
         eff_rate=(bill/agi*100) if agi>0 else 0.0
 
-        # Pay taxes
+        # Satisfy Tax Liabilities
         if c>=bill: c-=bill; sp_tx=bill
         elif c+bk>=bill: sp_tx=bill; d=bill-c; c=0.0; bk-=d
         else: sp_tx=c+bk; c=0.0; bk=0.0; ro=max(0.0,ro-(bill-sp_tx))
 
+        # Check IRMAA Tiers
         irmaa="⚠️" if agi>206000 else "—"
 
-        # Growth
+        # Apply Compounding Growth Functions
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
@@ -412,10 +427,9 @@ def run():
             logs,total_tax=run_sim(strat,cur,ret,end,infl,spend,status,srate,
                 fn,fs,fe,fa,ot,oa,oamt,an,at,ab,ar,sunset,False)
             last=logs[-1]
-            bl=f"Bracket {int(float(strat)*100)}%" if strat!="MAX_FAST" else "Max Liq."
-            document.getElementById('diag').innerText=f"▶ {bl} | NW: {fk(last['nw'])} | Life Tax: {fk(total_tax)}"
+            bl=f"Ceiling {int(float(strat)*100)}%" if strat!="MAX_FAST" else "Max Liquidation"
+            document.getElementById('diag').innerText=f"▶ {bl} | End Net Worth: {fk(last['nw'])} | Lifetime Income Tax: {fk(total_tax)}"
 
-            # build series for JS
             lbl=[]; c_=[]; bk_=[]; tr_=[]; ro_=[]
             demand_=[]; floors_=[]; deficit_=[]; surplus_=[]
             sp_pt_=[]; sp_bk_=[]; sp_ro_=[]; sp_tx_=[]
@@ -456,12 +470,11 @@ def run():
 
             document.getElementById('results-body').innerHTML="".join(rows)
             window.loadChartData(False,
-                json.dumps(lbl),
-                json.dumps(nw_),
-                json.dumps(c_),json.dumps(bk_),json.dumps(tr_),json.dumps(ro_),
-                json.dumps(demand_),json.dumps(floors_),json.dumps(deficit_),json.dumps(surplus_),
-                json.dumps(sp_pt_),json.dumps(sp_bk_),json.dumps(sp_ro_),json.dumps(sp_tx_),
-                json.dumps(rmd_),json.dumps(conv_),json.dumps(agi_),json.dumps(bill_),json.dumps(eff_))
+                json.dumps(lbl), json.dumps(nw_),
+                json.dumps(c_), json.dumps(bk_), json.dumps(tr_), json.dumps(ro_),
+                json.dumps(demand_), json.dumps(floors_), json.dumps(deficit_), json.dumps(surplus_),
+                json.dumps(sp_pt_), json.dumps(sp_bk_), json.dumps(sp_ro_), json.dumps(sp_tx_),
+                json.dumps(rmd_), json.dumps(conv_), json.dumps(agi_), json.dumps(bill_), json.dumps(eff_))
 
         else:
             trials=1000
@@ -489,22 +502,21 @@ def run():
                     <td colspan="3" class="c-red" style="text-align:center">{fk(v10)}</td>
                     <td colspan="4" class="c-green" style="text-align:center;font-weight:700">{fk(v50)}</td>
                     <td colspan="4" class="c-cyan" style="text-align:center">{fk(v90)}</td>
-                    <td colspan="5" class="c-muted" style="text-align:center;font-size:10px">1,000 paths</td>
+                    <td colspan="5" class="c-muted" style="text-align:center;font-size:10px">1,000 runs structural paths</td>
                 </tr>""")
-            document.getElementById('diag').innerText=f"🎲 Monte Carlo · {pct:.1f}% longevity probability across 1,000 paths"
+            document.getElementById('diag').innerText=f"🎲 Monte Carlo Engine Complete · {pct:.1f}% Portfolio Success Velocity over 1,000 paths"
             document.getElementById('results-body').innerHTML="".join(rows)
             window.loadChartData(True,
                 json.dumps(lbl),json.dumps(p10),json.dumps(p50),json.dumps(p90),
                 "[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]")
 
     except Exception as e:
-        window.alert(f"Engine error: {str(e)}")
+        window.alert(f"Execution Error: {str(e)}")
 
 window.execute_sim=run
 </script>
 
 <script>
-// ── Pyodide ──
 let pyScript = document.createElement('script');
 pyScript.src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
 document.head.appendChild(pyScript);
@@ -514,10 +526,8 @@ pyScript.onload=async()=>{
     document.querySelectorAll("script[type='text/python']").forEach(s=>py.runPython(s.textContent));
 };
 
-// ── Chart state ──
 let chart=null;
 let D={}, isStoch=false, winYrs=null;
-const IRMAA_LINE=206000;
 
 window.loadChartData=function(stoch,lbl,nw,c,bk,tr,ro,demand,floors,deficit,surplus,sp_pt,sp_bk,sp_ro,sp_tx,rmd,conv,agi,bill,eff){
     isStoch=stoch;
@@ -540,8 +550,7 @@ function buildChart(){
 
     const labels=slice(D.labels);
     const view=document.querySelector('.vtab.active')?.dataset?.view||'NET_WORTH';
-    let datasets=[], chartType='line', options={};
-    const stacked=false;
+    let datasets=[], chartType='line';
 
     const line=(label,data,color,opts={})=>({
         type:'line',label,data:slice(data),borderColor:color,backgroundColor:'transparent',
@@ -558,85 +567,53 @@ function buildChart(){
 
     if(isStoch){
         datasets=[
-            line('10th %ile',D.c,'#f85149',{borderDash:[4,4],borderWidth:1.5}),
-            line('50th %ile (Median)',D.bk,'#3fb950',{borderWidth:2.5}),
-            line('90th %ile',D.tr,'#58a6ff',{borderDash:[4,4],borderWidth:1.5})
+            line('10th Percentile Floor',D.c,'#f85149',{borderDash:[4,4]}),
+            line('50th Percentile Median Path',D.bk,'#3fb950',{borderWidth:2.5}),
+            line('90th Percentile High Horizon',D.tr,'#58a6ff',{borderDash:[4,4]})
         ];
     } else {
         switch(view){
-            case 'NET_WORTH':
-                datasets=[line('Net Worth',D.nw,'#58a6ff',{borderWidth:2.5})];
-                break;
+            case 'NET_WORTH': datasets=[line('Aggregated Capital Net Worth',D.nw,'#58a6ff',{borderWidth:2.5})]; break;
             case 'STACKED':
                 datasets=[
-                    area('Cash',D.c,'rgb(188,140,255)','stk'),
-                    area('Brokerage',D.bk,'rgb(88,166,255)','stk'),
-                    area('Pre-Tax',D.tr,'rgb(210,153,34)','stk'),
-                    area('Roth',D.ro,'rgb(63,185,80)','stk'),
-                ];
-                break;
-            case 'CASH':   datasets=[line('Cash Balance',D.c,'#bc8cff',{borderWidth:2.5})]; break;
-            case 'BROKERAGE': datasets=[line('Brokerage',D.bk,'#58a6ff',{borderWidth:2.5})]; break;
-            case 'PRETAX': datasets=[line('Pre-Tax Balance',D.tr,'#d29922',{borderWidth:2.5})]; break;
-            case 'ROTH':   datasets=[line('Roth Balance',D.ro,'#3fb950',{borderWidth:2.5})]; break;
+                    area('Cash Reserves',D.c,'rgb(188,140,255)','stk'),
+                    area('Taxable Brokerage',D.bk,'rgb(88,166,255)','stk'),
+                    area('Pre-Tax Traditional',D.tr,'rgb(210,153,34)','stk'),
+                    area('Roth Container',D.ro,'rgb(63,185,80)','stk'),
+                ]; break;
+            case 'PRETAX': datasets=[line('Pre-Tax Assets Balance',D.tr,'#d29922')]; break;
+            case 'ROTH':   datasets=[line('Roth Assets Balance',D.ro,'#3fb950')]; break;
             case 'INCOME_VS_SPEND':
                 datasets=[
-                    bar('Fixed Floors',D.floors,'rgba(63,185,80,0.7)','inc'),
-                    bar('Drawdown',D.deficit,'rgba(88,166,255,0.7)','inc'),
-                    bar('Spending Need',D.demand,'rgba(248,81,73,0.7)','spd'),
-                ];
-                chartType='bar'; break;
-            case 'SURPLUS':
-                datasets=[{
-                    type:'bar',label:'Surplus (+) / Deficit (−)',
-                    data:slice(D.surplus),
-                    backgroundColor:slice(D.surplus).map(v=>v>=0?'rgba(63,185,80,0.7)':'rgba(248,81,73,0.7)'),
-                    stack:'s',borderWidth:0
-                }];
-                chartType='bar'; break;
+                    bar('Guaranteed Income Floors',D.floors,'rgba(63,185,80,0.7)','inc'),
+                    bar('Portfolio Distribution Requirement',D.deficit,'rgba(88,166,255,0.7)','inc'),
+                    bar('Gross Spending Target',D.demand,'rgba(248,81,73,0.7)','spd'),
+                ]; chartType='bar'; break;
             case 'WITHDRAWAL':
                 datasets=[
-                    bar('Fixed Floors',D.floors,'rgba(63,185,80,0.65)','w'),
+                    bar('Guaranteed Floors',D.floors,'rgba(63,185,80,0.65)','w'),
                     bar('Pre-Tax Draw',D.sp_pt,'rgba(210,153,34,0.75)','w'),
                     bar('Brokerage Draw',D.sp_bk,'rgba(88,166,255,0.65)','w'),
                     bar('Roth Draw',D.sp_ro,'rgba(63,185,80,0.45)','w'),
-                    bar('Tax Paid',D.sp_tx,'rgba(248,81,73,0.65)','w'),
-                ];
-                chartType='bar'; break;
+                    bar('Tax Outflows',D.sp_tx,'rgba(248,81,73,0.65)','w'),
+                ]; chartType='bar'; break;
             case 'RMD_CONV':
                 datasets=[
-                    bar('RMD Required',D.rmd,'rgba(240,136,62,0.75)','rc'),
-                    bar('Roth Conversion',D.conv,'rgba(188,140,255,0.75)','rc2'),
-                ];
-                chartType='bar'; break;
+                    bar('Statutory Age RMDs',D.rmd,'rgba(240,136,62,0.75)','rc'),
+                    bar('Executed Roth Conversion',D.conv,'rgba(188,140,255,0.75)','rc2'),
+                ]; chartType='bar'; break;
             case 'TAX_STACK':
                 datasets=[
-                    bar('Tax Bill',D.bill,'rgba(248,81,73,0.75)','t'),
-                    line('AGI',D.agi,'#79c0ff',{borderWidth:1.5,borderDash:[]}),
-                ];
-                chartType='bar'; break;
-            case 'EFF_RATE':
-                datasets=[
-                    line('Effective Tax Rate %',D.eff,'#f85149',{borderWidth:2.5}),
-                    {type:'line',label:'IRMAA threshold reference',
-                     data:slice(D.agi).map(()=>20),
-                     borderColor:'rgba(210,153,34,0.4)',backgroundColor:'transparent',
-                     borderDash:[4,4],pointRadius:0,borderWidth:1}
-                ];
-                break;
+                    bar('Total Income Tax Owed',D.bill,'rgba(248,81,73,0.75)','t'),
+                    line('AGI Coordinate Metric',D.agi,'#79c0ff'),
+                ]; chartType='bar'; break;
+            case 'EFF_RATE': datasets=[line('Effective Consolidated Tax %',D.eff,'#f85149',{borderWidth:2.5})]; break;
             case 'IRMAA_AGI':
                 datasets=[
-                    line('AGI',D.agi,'#79c0ff',{borderWidth:2}),
-                    {type:'line',label:'IRMAA Tier 1 ($206k)',
-                     data:slice(D.agi).map(()=>206000),
-                     borderColor:'rgba(248,81,73,0.6)',backgroundColor:'transparent',
-                     borderDash:[5,3],pointRadius:0,borderWidth:1.5},
-                    {type:'line',label:'IRMAA Tier 2 ($258k)',
-                     data:slice(D.agi).map(()=>258000),
-                     borderColor:'rgba(210,153,34,0.6)',backgroundColor:'transparent',
-                     borderDash:[5,3],pointRadius:0,borderWidth:1.5},
-                ];
-                break;
+                    line('Calculated Target AGI',D.agi,'#79c0ff',{borderWidth:2}),
+                    {type:'line',label:'IRMAA Threshold Tier 1 ($206k)',data:slice(D.agi).map(()=>206000),borderColor:'rgba(248,81,73,0.6)',borderDash:[5,3],pointRadius:0},
+                    {type:'line',label:'IRMAA Threshold Tier 2 ($258k)',data:slice(D.agi).map(()=>258000),borderColor:'rgba(210,153,34,0.6)',borderDash:[5,3],pointRadius:0}
+                ]; break;
         }
     }
 
@@ -645,41 +622,22 @@ function buildChart(){
         type: isBar?'bar':'line',
         data:{labels,datasets},
         options:{
-            responsive:true,
-            maintainAspectRatio:false,
-            animation:{duration:250},
+            responsive:true,maintainAspectRatio:false,
             interaction:{mode:'index',intersect:false},
             plugins:{
-                legend:{labels:{color:'#7d8590',boxWidth:10,font:{size:10,family:"'IBM Plex Mono',monospace"}}},
+                legend:{labels:{color:'#7d8590',font:{size:10,family:"'IBM Plex Mono'"}}},
                 tooltip:{callbacks:{
-                    label:ctx=>{
-                        const v=ctx.raw;
-                        if(view==='EFF_RATE') return ` ${ctx.dataset.label}: ${typeof v==='number'?v.toFixed(1)+'%':'—'}`;
-                        return ` ${ctx.dataset.label}: $${Math.round(v/1000).toLocaleString()}k`;
-                    }
+                    label:ctx=>` ${ctx.dataset.label}: ` + (view==='EFF_RATE'? ctx.raw.toFixed(1)+'%' : '$'+Math.round(ctx.raw/1000).toLocaleString()+'k')
                 }}
             },
             scales:{
-                x:{
-                    stacked:isBar,
-                    ticks:{color:'#7d8590',font:{size:9,family:"'IBM Plex Mono',monospace"},maxRotation:45},
-                    grid:{color:'rgba(48,54,61,0.5)'}
-                },
-                y:{
-                    stacked:isBar&&['WITHDRAWAL','INCOME_VS_SPEND','RMD_CONV'].includes(view),
-                    ticks:{
-                        color:'#7d8590',
-                        font:{size:10,family:"'IBM Plex Mono',monospace"},
-                        callback:v=>view==='EFF_RATE'?v.toFixed(0)+'%':'$'+Math.round(v/1000).toLocaleString()+'k'
-                    },
-                    grid:{color:'rgba(48,54,61,0.5)'}
-                }
+                x:{stacked:isBar,ticks:{color:'#7d8590',font:{size:9,family:"'IBM Plex Mono'"}},grid:{color:'rgba(48,54,61,0.5)'}},
+                y:{stacked:isBar&&['WITHDRAWAL','INCOME_VS_SPEND','RMD_CONV'].includes(view),ticks:{color:'#7d8590',font:{size:10,family:"'IBM Plex Mono'"},callback:v=>view==='EFF_RATE'?v+'%':'$'+Math.round(v/1000)+'k'},grid:{color:'rgba(48,54,61,0.5)'}}
             }
         }
     });
 }
 
-// ── View tabs ──
 document.querySelectorAll('.vtab').forEach(btn=>{
     btn.addEventListener('click',()=>{
         document.querySelectorAll('.vtab').forEach(b=>b.classList.remove('active'));
@@ -688,65 +646,47 @@ document.querySelectorAll('.vtab').forEach(btn=>{
     });
 });
 
-// ── Time window ──
 function setWindow(y){
     winYrs=y;
     document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
-    const lbl=y?y+'Y':'ALL';
-    document.querySelectorAll('.tbtn').forEach(b=>{if(b.textContent.trim()===lbl)b.classList.add('active');});
+    const lbl=y?y+'Y':'Full Projection Lifetime';
+    document.querySelectorAll('.tbtn').forEach(b=>{if(b.textContent.trim().startsWith(y||'Full'))b.classList.add('active');});
     buildChart();
 }
 
-// ── Ledger ──
-let ledgerOpen=false;
-function toggleLedger(){
-    ledgerOpen=!ledgerOpen;
-    document.getElementById('ledger').classList.toggle('hide',!ledgerOpen);
-    document.getElementById('tog-ledger').textContent=ledgerOpen?'▲ Hide':'▼ Show';
-}
 const colState={budget:true,sources:true,balances:true,taxes:true};
 function toggleCol(g){
     colState[g]=!colState[g];
     document.querySelector('#ledger table').classList.toggle('hide-'+g,!colState[g]);
     document.getElementById('tog-'+g).classList.toggle('active',colState[g]);
 }
-
-// ── Mode ──
 function toggleModeUI(){
     const s=document.getElementById('simulation_mode').value==='STOCHASTIC';
     document.querySelectorAll('.vtab:not([data-view="NET_WORTH"])').forEach(b=>{
-        b.style.opacity=s?'.35':'1';
-        b.style.pointerEvents=s?'none':'auto';
+        b.style.opacity=s?'.35':'1'; b.style.pointerEvents=s?'none':'auto';
     });
 }
-
-// ── Add rows ──
 function addFloorRow(){
     document.getElementById('income-floor-body').insertAdjacentHTML('beforeend',`<tr>
-        <td class="tl"><input type="text" class="floor-name" value="Pension"></td>
+        <td class="tl"><input type="text" class="floor-name" value="Annuity Payout"></td>
         <td><input type="number" class="floor-start" value="65"></td>
         <td><input type="number" class="floor-end" value="95"></td>
-        <td><input type="number" class="floor-amount" value="15000"></td>
+        <td><input type="number" class="floor-amount" value="20000"></td>
         <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
 }
 function addOutlayRow(){
     document.getElementById('outlays-body').insertAdjacentHTML('beforeend',`<tr>
         <td><select class="outlay-type"><option>Capital Shock</option></select></td>
-        <td><input type="number" class="outlay-age" value="70"></td>
-        <td><input type="number" class="outlay-amount" value="30000"></td>
+        <td><input type="number" class="outlay-age" value="75"></td>
+        <td><input type="number" class="outlay-amount" value="35000"></td>
         <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
 }
 function addAccountRow(){
     document.getElementById('accounts-body').insertAdjacentHTML('beforeend',`<tr>
-        <td class="tl"><input type="text" class="acc-name" value="New Account"></td>
-        <td><select class="acc-type">
-            <option value="Traditional">Traditional</option>
-            <option value="Roth">Roth</option>
-            <option value="Brokerage" selected>Brokerage</option>
-            <option value="Cash">Cash</option>
-        </select></td>
-        <td><input type="number" class="acc-balance" value="50000"></td>
-        <td><input type="number" class="acc-return" step="0.01" value="0.06"></td>
+        <td class="tl"><input type="text" class="acc-name" value="Roth IRA Supplemental"></td>
+        <td><select class="acc-type"><option value="Traditional">Traditional</option><option value="Roth" selected>Roth</option><option value="Brokerage">Brokerage</option><option value="Cash">Cash</option></select></td>
+        <td><input type="number" class="acc-balance" value="100000"></td>
+        <td><input type="number" class="acc-return" step="0.01" value="0.07"></td>
         <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
 }
 function triggerEngine(){if(window.execute_sim)window.execute_sim();}
