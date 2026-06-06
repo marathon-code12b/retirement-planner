@@ -8,10 +8,19 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg:#0d1117; --surface:#161b22; --surface2:#1e2730; --border:#30363d;
-            --text:#e6edf3; --muted:#7d8590; --accent:#58a6ff; --green:#3fb950;
-            --amber:#d29922; --red:#f85149; --purple:#bc8cff; --cyan:#79c0ff;
-            --orange:#f0883e;
+            --bg: #0d1117; 
+            --surface: #161b22; 
+            --surface2: #1e2730; 
+            --border: #30363d;
+            --text: #e6edf3; 
+            --muted: #7d8590; 
+            --accent: #58a6ff; 
+            --green: #3fb950;
+            --amber: #d29922; 
+            --red: #f85149; 
+            --purple: #bc8cff; 
+            --cyan: #79c0ff;
+            --orange: #f0883e;
         }
         *{box-sizing:border-box;margin:0;padding:0;}
         body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh;}
@@ -111,7 +120,6 @@
 
 <div class="layout">
 
-<!-- ══ SIDEBAR ══ -->
 <div class="sidebar"><div class="sb">
 
     <div class="slabel">Engine</div>
@@ -205,11 +213,9 @@
 
 </div></div>
 
-<!-- ══ MAIN ══ -->
 <div class="main">
 
     <div class="chart-area">
-        <!-- View tabs grouped by category -->
         <div class="view-tabs" id="view-tabs">
             <span style="font-size:10px;color:var(--muted);align-self:center;margin-right:2px;">ASSETS:</span>
             <button class="vtab grp-asset active" data-view="NET_WORTH">Net Worth</button>
@@ -239,7 +245,6 @@
         <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
     </div>
 
-    <!-- LEDGER STRIP -->
     <div class="lstrip">
         <span class="slbl">Ledger</span>
         <button class="ctog active" id="tog-ledger" onclick="toggleLedger()">▼ Show</button>
@@ -250,7 +255,6 @@
         <button class="ctog active" id="tog-taxes" onclick="toggleCol('taxes')">Taxes</button>
     </div>
 
-    <!-- LEDGER -->
     <div class="ledger hide" id="ledger">
         <table>
             <thead id="ledger-head">
@@ -266,11 +270,7 @@
         </table>
     </div>
 
-</div><!-- end .main -->
-</div><!-- end .layout -->
-
-<!-- ══ PYTHON ENGINE ══ -->
-<script type="text/python">
+</div></div><script type="text/python">
 import js, json
 from js import document, window
 
