@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v3.5</title>
+    <title>Retirement Matrix Engine v3.8</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -31,11 +31,9 @@
         .hdr p{font-size:11px;color:var(--muted);}
         #diag{margin-left:auto;background:#0d2b1a;border:1px solid #1a4a2e;color:var(--green);font-size:11px;padding:4px 10px;border-radius:20px;font-family:'IBM Plex Mono',monospace;max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-        /* LAYOUT (RESTRUCTURED FOR TOP-DOMINANT TABLES) */
+        /* LAYOUT */
         .layout{display:grid;grid-template-columns:288px 1fr;height:calc(100vh - 45px);}
         .sidebar{border-right:1px solid var(--border);overflow-y:auto;background:var(--surface);}
-        
-        /* Flex Column directing workspace flow to Table first, Chart second */
         .main{display:flex;flex-direction:column;overflow-y:auto;height:100%;}
 
         /* SIDEBAR COMPONENTS */
@@ -55,12 +53,11 @@
         .btn:hover{opacity:.85;}
         .bdel{background:var(--red);color:#fff;padding:1px 5px;font-size:10px;margin:0;border:none;border-radius:2px;cursor:pointer;}
         
-        /* Prominent Action Interface at Top of Controls */
         .brun{background:var(--green);color:#0d1117;width:100%;padding:10px;font-size:13px;letter-spacing:.05em;margin-bottom:12px;border-radius:5px;border:none;cursor:pointer;font-weight:700;box-shadow:0 0 10px rgba(63,185,80,0.15);}
         .brun:hover{opacity:.9;transform:scale(0.99);}
 
-        /* TOP WORKSPACE: RESTRUCTURED LEDGER INTERFACE */
-        .ledger-container-top {background:var(--bg);border-bottom:1px solid var(--border);display:flex;flex-direction:column;max-height:45%;flex-shrink:0;}
+        /* TOP WORKSPACE: LEDGER INTERFACE */
+        .ledger-container-top {background:var(--bg);border-bottom:1px solid var(--border);display:flex;flex-direction:column;max-height:50%;flex-shrink:0;}
         .lstrip{background:var(--surface);border-bottom:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;}
         .slbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-right:2px;}
         .ctog{padding:2px 8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);border-radius:3px;cursor:pointer;font-size:10px;transition:all .15s;white-space:nowrap;}
@@ -74,8 +71,8 @@
         .ledger tr:hover td{background:var(--surface2);}
         .ledger .tl{text-align:left;}
 
-        /* BOTTOM WORKSPACE: ANALYTICAL GRAPH */
-        .chart-area{flex:1;display:flex;flex-direction:column;padding:10px 14px 6px;overflow:hidden;background:var(--surface2);}
+        /* BOTTOM WORKSPACE: CHART AREA */
+        .chart-area{flex:1;display:flex;flex-direction:column;padding:10px 14px 6px;overflow:hidden;background:var(--surface2);min-height:300px;}
         .view-tabs{display:flex;gap:3px;flex-wrap:wrap;}
         .vtab{padding:3px 9px;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:3px;cursor:pointer;font-size:11px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;transition:all .15s;}
         .vtab:hover{border-color:var(--muted);color:var(--text);}
@@ -111,12 +108,13 @@
 <body>
 
 <div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v3.5</h1><p>Top-Down Ledger Matrix Workspace · Dynamic Conversion Engine</p></div>
+    <div><h1>⚡ RETIREMENT MATRIX ENGINE v3.8</h1><p>Top-Down Ledger Matrix Workspace · Fixed Age 73 Conversion Horizon Override</p></div>
     <div id="diag">Configuration idle — execute simulation logic to render arrays.</div>
 </div>
 
 <div class="layout">
 
+<!-- ══ SIDEBAR CONTROLS ══ -->
 <div class="sidebar"><div class="sb">
 
     <button class="brun" onclick="triggerEngine()">⚡ RUN INTEGRATED MATRIX</button>
@@ -155,8 +153,8 @@
         <div><label>Conversion Ceiling</label>
             <select id="target_bracket">
                 <option value="0.12">Top 12% / 15%</option>
-                <option value="0.22" selected>Top 22% / 25%</option>
-                <option value="0.24">Top 24% / 28%</option>
+                <option value="0.22">Top 22% / 25%</option>
+                <option value="0.24" selected>Top 24% / 28%</option>
                 <option value="0.32">Top 32% (Aggressive)</option>
                 <option value="0.35">Top 35% (Max Mitigate)</option>
                 <option value="MAX_FAST">Max Fast Liquidate</option>
@@ -224,6 +222,7 @@
 
 </div></div>
 
+<!-- ══ MAIN LAYOUT CORE: MATRIX TABLE TOP, CHART BOTTOM ══ -->
 <div class="main">
 
     <div class="ledger-container-top">
@@ -283,6 +282,7 @@
 </div>
 </div>
 
+<!-- ══ FIXED PYTHON SIMULATION ENGINE ══ -->
 <script type="text/python">
 import js, json
 from js import document, window
@@ -298,8 +298,7 @@ def fk(v): return f"${v/1000:,.0f}k"
 def brackets(status, sunset, yr):
     s = sunset and yr>=1
     if status=="MFJ":
-        # Full 2026 Extended Statutory Brackets
-        return ([15100,61300,123700,188450,336550,400000,600000],[.10,.15,.25,.28,.33,.35,.36,.396],29200) if s else \
+        return ([15100,61300,123700,188450,336550,400000,600000],[.10,.15,.25,.28,.33,.35,.36,.37],29200) if s else \
                ([23200,94300,201050,383900,487450,731200,900000],[.10,.12,.22,.24,.32,.35,.35,.37],29200)
     else:
         return ([7550,30650,74200,154800,336550,400000,500000],[.10,.15,.25,.28,.33,.35,.36,.396],14600) if s else \
@@ -344,7 +343,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
         deficit=max(0.0,demand-floors)
 
-        # Process Required Minimum Distributions
+        # 1. RMD Extraction
         rmd=0.0
         f=rmd_factor(age)
         if f>0 and tr>0: rmd=min(tr,tr/f)
@@ -353,7 +352,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         rem=deficit-rmd
         if rem<0: c+=abs(rem); rem=0.0
 
-        # Liquidate via Account Hierarchy Cascade
+        # 2. Income/Expense Drawdown Cascade
         if rem>0:
             d=min(bk,rem); sp_bk=d; bk-=d; rem-=d
         if rem>0:
@@ -361,34 +360,50 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if rem>0:
             d=min(ro,rem); sp_ro=d; ro-=d; rem-=d
 
-        # Dynamic Roth Conversion Bracket Optimizer (Handles 12% through 35%)
+        # 3. FIXED AGE 73 OVERRIDE ROTATION ENGINE
         conv=0.0
-        bkts,rates,ded=brackets(status,sunset,yr)
-        if strategy!="MAX_FAST" and tr>0:
+        # Conversions run uninterrupted until 2 years before RMD age (Age 71 maximum limit)
+        if age <= 71 and strategy != "MAX_FAST" and tr > 0:
+            bkts,rates,ded=brackets(status,sunset,yr)
             tpct=float(strategy)
             lim=0.0
             for bi,rv in enumerate(rates):
                 if rv<=tpct: lim=bkts[bi] if bi<len(bkts) else bkts[-1]*1.5
             base=floors+sp_pt
             room=max(0.0,(lim+ded)-base)
-            if room>0: conv=min(tr,room); tr-=conv; ro+=conv
-        elif strategy=="MAX_FAST" and tr>0:
+            if room>0: 
+                conv=min(tr,room)
+                tr-=conv
+                ro+=conv
+        elif age <= 71 and strategy=="MAX_FAST" and tr>0:
             conv=tr; tr=0.0; ro+=conv
 
+        # 4. Calculate Final Tax Owed
         agi=floors+sp_pt+conv
         bill=tax_calc(agi,status,sunset,yr,srate)
         total_tax+=bill
         eff_rate=(bill/agi*100) if agi>0 else 0.0
 
-        # Satisfy Tax Liabilities
-        if c>=bill: c-=bill; sp_tx=bill
-        elif c+bk>=bill: sp_tx=bill; d=bill-c; c=0.0; bk-=d
-        else: sp_tx=c+bk; c=0.0; bk=0.0; ro=max(0.0,ro-(bill-sp_tx))
+        # 5. NET-OF-TAX CORRECTION LOGIC (Prevents premature conversion crashes)
+        if c>=bill: 
+            c-=bill; sp_tx=bill
+        elif c+bk>=bill: 
+            sp_tx=bill; d=bill-c; c=0.0; bk-=d
+        else:
+            # If outside brokerage and cash dry up, pull conversion taxes directly from asset loops
+            sp_tx=c+bk; remaining_bill=bill-sp_tx; c=0.0; bk=0.0
+            if conv>0:
+                # Readjust the newly added Roth balance down to reflect automated tax withholding
+                withheld=min(ro,remaining_bill)
+                ro-=withheld; sp_tx+=withheld; remaining_bill-=withheld
+            if remaining_bill>0:
+                # Claw back remaining balance out of the underlying Pre-Tax container directly
+                withheld=min(tr,remaining_bill)
+                tr-=withheld; sp_tx+=withheld
 
-        # Check IRMAA Tiers
         irmaa="⚠️" if agi>206000 else "—"
 
-        # Apply Compounding Growth Functions
+        # 6. Apply Compounding Rates of Return
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
