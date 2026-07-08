@@ -323,7 +323,7 @@ def format_cell(v, style_class=""):
     return formatted_num
 
 def brackets(status, sunset, yr):
-    s = sunset and yr>=1
+    s = sunset and yr+2025>=2026
     if status=="MFJ":
         return ([15100,61300,123700,188450,336550,400000,600000],[.10,.15,.25,.28,.33,.35,.36,.37],29200) if s else \
                ([23200,94300,201050,383900,487450,731200,900000],[.10,.12,.22,.24,.32,.35,.35,.37],29200)
@@ -401,23 +401,20 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if opt_drain and age <= 72:
             active_strat = "0.24" 
 
-        safety_allows = true
+        safety_allows = True
         if opt_safety and current_liq < (demand * 0.3):
-            safety_allows = false
+            safety_allows = False
 
         if age <= 72 and active_strat != "0.00" and safety_allows and tr > 0:
             bkts,rates,ded = brackets(status,sunset,yr)
             tpct = 0.99 if active_strat=="MAX_FAST" else float(active_strat)
             
-            # Find the exact ceiling of the specified tax bracket rate
             target_ceiling = 0.0
             for bi, rv in enumerate(rates):
                 if rv <= tpct:
                     target_ceiling = bkts[bi] if bi < len(bkts) else bkts[-1] * 1.5
             
-            # Base AGI before adding conversions
             base_agi = floors + sp_pt
-            # Target AGI limit = Bracket Taxable Ceiling + Standard Deduction
             target_agi_limit = target_ceiling + ded
             
             room = max(0.0, target_agi_limit - base_agi)
@@ -432,7 +429,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         total_tax += bill
         eff_rate = (bill/agi*100) if agi>0 else 0.0
 
-        # 5. Liquidation Hierarchy for Tax Clearance (Pay from pre-tax ONLY if liquid asset cushion hits 0)
+        # 5. Liquidation Hierarchy for Tax Clearance (Pay from pre-tax ONLY if liquid cash drops to zero)
         if c >= bill: 
             c -= bill; sp_tx = bill
         elif (c + bk) >= bill: 
@@ -440,7 +437,6 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
             bill -= c; c = 0.0
             bk -= bill
         else:
-            # Liquid assets completely wiped out -> Enact automated Pre-Tax emergency tax withholding
             sp_tx = c + bk
             remaining_bill = bill - sp_tx
             c = 0.0; bk = 0.0
@@ -467,7 +463,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
 
-        # 7. Float-Tolerant Accounting Audit Pass
+        # 7. Accounting Audit Pass
         total_distributed = sp_pt + sp_bk + sp_ro
         expected_min_distribution = min(init_total_assets, deficit)
         
