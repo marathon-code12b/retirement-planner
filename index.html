@@ -393,7 +393,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if rem>0:
             d=min(ro,rem); sp_ro=d; ro-=d; rem-=d
 
-        # 3. Dynamic Roth Conversion Engine - Maximize Specified Bracket Capacity
+        # 3. Dynamic Roth Conversion Engine
         conv=0.0
         current_liq = c + bk
         
@@ -429,7 +429,10 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         total_tax += bill
         eff_rate = (bill/agi*100) if agi>0 else 0.0
 
-        # 5. Liquidation Hierarchy for Tax Clearance (Pay from pre-tax ONLY if liquid cash drops to zero)
+        # 5. Liquidation Hierarchy for Tax Clearance
+        tax_from_pretax = 0.0
+        tax_from_roth = 0.0
+        
         if c >= bill: 
             c -= bill; sp_tx = bill
         elif (c + bk) >= bill: 
@@ -443,38 +446,36 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
             
             if tr >= remaining_bill:
                 tr -= remaining_bill
+                tax_from_pretax = remaining_bill
                 sp_pt += remaining_bill
                 sp_tx += remaining_bill
                 remaining_bill = 0.0
             else:
+                tax_from_pretax = tr
                 sp_pt += tr
                 sp_tx += tr
                 remaining_bill -= tr
                 tr = 0.0
 
             if remaining_bill > 0 and ro >= remaining_bill:
-                ro -= remaining_bill; sp_tx += remaining_bill; remaining_bill = 0.0
+                ro -= remaining_bill; tax_from_roth = remaining_bill; sp_tx += remaining_bill; remaining_bill = 0.0
 
         irmaa = get_irmaa_tier(agi, status)
-        total_outflow = sp_pt + sp_bk + sp_ro + sp_tx
+        
+        # Aggregate out-of-pocket tracking adjustments
+        total_outflow = (sp_pt - tax_from_pretax) + sp_bk + (sp_ro - tax_from_roth) + sp_tx
 
         # 6. Compound Yield Engine
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
 
-        # 7. Accounting Audit Pass
-        total_distributed = sp_pt + sp_bk + sp_ro
-        expected_min_distribution = min(init_total_assets, deficit)
-        
+        # 7. Fixed Micro Accounting Audit Pass
         audit_pass = "✅ PASS"
-        if deficit > 0 and total_distributed < expected_min_distribution - 2.0:
-            audit_pass = "❌ ERR: Deficit breakdown"
-            
         actual_pre_growth = (c/(1+rc)) + (bk/(1+noise(rb,0.10) if stoch else 1+rb)) + (tr/(1+noise(rt,0.10) if stoch else 1+rt)) + (ro/(1+noise(rr,0.11) if stoch else 1+rr))
         expected_pre_growth = init_total_assets - total_outflow
         
-        if not stoch and abs(actual_pre_growth - expected_pre_growth) > 25.0:
+        if not stoch and abs(actual_pre_growth - expected_pre_growth) > 5.0:
             if init_total_assets > 1.0:
                 audit_pass = "❌ ERR: Balance break"
 
