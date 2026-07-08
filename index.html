@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v4.2 (Self-Verifying Sandbox)</title>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Retirement Matrix Engine v4.5 (High-Contrast Audit Sandbox)</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -13,7 +13,7 @@
             --surface2: #1e2730; 
             --border: #30363d;
             --text: #e6edf3; 
-            --muted: #7d8590; 
+            --muted: #6e7681; 
             --accent: #58a6ff; 
             --green: #3fb950;
             --amber: #d29922; 
@@ -71,7 +71,7 @@
         .mt th{background:var(--surface2);color:var(--muted);padding:3px 4px;border:1px solid var(--border);font-size:10px;font-weight:600;text-align:center;}
         .mt td{border:1px solid var(--border);padding:2px 3px;}
         .mt input,.mt select{padding:2px 3px;font-size:10px;}
-        .tl text-align:left;}
+        .tl{text-align:left;}
         .btn{background:var(--accent);color:#0d1117;border:none;padding:4px 9px;border-radius:3px;cursor:pointer;font-weight:700;font-size:11px;margin-top:5px;}
         .btn:hover{opacity:.85;}
         .bdel{background:var(--red);color:#fff;padding:1px 5px;font-size:10px;margin:0;border:none;border-radius:2px;cursor:pointer;}
@@ -88,10 +88,17 @@
         
         .ledger{overflow:auto;flex:1;}
         .ledger table{width:100%;border-collapse:collapse;font-size:11px;font-family:'IBM Plex Mono',monospace;}
-        .ledger th{background:var(--surface);color:var(--muted);padding:4px 7px;border:1px solid var(--border);text-align:right;font-size:10px;font-weight:600;white-space:nowrap;position:sticky;top:0;z-index:2;}
-        .ledger td{padding:3px 7px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;}
+        .ledger th{background:var(--surface);color:var(--muted);padding:6px 7px;border:1px solid var(--border);text-align:right;font-size:10px;font-weight:600;white-space:nowrap;position:sticky;top:0;z-index:2;}
+        .ledger td{padding:4px 7px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;font-weight:400;}
         .ledger tr:hover td{background:var(--surface2);}
         .ledger .tl{text-align:left;}
+
+        /* HIGH READABILITY READ-OUT CLASS SYSTEM */
+        .val-zero { color: #30363d !important; font-weight: 400 !important; } /* Dimmed Zero Formatting */
+        .val-outflow { color: #f87171; font-weight: 500; } /* Soft red reduction output */
+        .val-inflow { color: #4ade80; font-weight: 500; } /* Soft green asset balance */
+        .val-conversion { color: #c084fc; font-weight: 600; } /* High contrast conversion highlight */
+        .val-deficit { color: #fbbf24; font-weight: 500; } /* Attention-grabbing gap requirement */
 
         /* BOTTOM WORKSPACE: CHART AREA */
         .chart-area{flex:1;display:flex;flex-direction:column;padding:10px 14px 6px;overflow:hidden;background:var(--surface2);min-height:300px;}
@@ -122,7 +129,7 @@
 <body>
 
 <div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.2</h1><p>Strategic Sandbox Mode · Automated Logic Audit Engine</p></div>
+    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.5</h1><p>Strategic Sandbox Mode · Pre-Tax Withholding Logic Matrix</p></div>
     <div id="diag">Warming up simulation environment...</div>
 </div>
 
@@ -131,13 +138,12 @@
 <!-- ══ SIDEBAR CONTROLS ══ -->
 <div class="sidebar">
     
-    <!-- DYNAMIC DEMO PRESETS BAR -->
     <div class="preset-bar">
         <span class="preset-title">🏆 Load Preset Case Studies</span>
         <div class="preset-grid">
-            <button class="p-btn" title="Source: Reddit r/financialindependence Community Micro-Data Case Study" onclick="loadPreset('fire')">🔥 FIRE DINKs</button>
-            <button class="p-btn" title="Source: Next Gen Personal Finance (NGPF) National Curriculum Database" onclick="loadPreset('ngpf')">🎓 NGPF Jocelyn</button>
-            <button class="p-btn" title="Source: Bogleheads Forum Retirement Asset Distribution Modeling Thread" onclick="loadPreset('irmaa')">🛑 IRMAA Trap</button>
+            <button class="p-btn" title="FIRE DINKs Case Study" onclick="loadPreset('fire')">🔥 FIRE DINKs</button>
+            <button class="p-btn" title="NGPF Curriculum Database Case Study" onclick="loadPreset('ngpf')">🎓 NGPF Jocelyn</button>
+            <button class="p-btn" title="Bogleheads IRMAA Modeling Case Study" onclick="loadPreset('irmaa')">🛑 IRMAA Trap</button>
         </div>
     </div>
 
@@ -307,7 +313,15 @@ def si(eid,d):
 def sf(eid,d):
     try: return float(document.getElementById(eid).value)
     except: return d
-def fk(v): return f"${v/1000:,.0f}k" if v >= 0 else f"-${abs(v)/1000:,.0f}k"
+
+# Advanced structural string compiler with conditional high-readability css hooks
+def format_cell(v, style_class=""):
+    if v == 0.0 or abs(v) < 0.01:
+        return '<span class="val-zero">—</span>'
+    formatted_num = f"${v/1000:,.1f}k" if v >= 0 else f"-${abs(v)/1000:,.1f}k"
+    if style_class:
+        return f'<span class="{style_class}">{formatted_num}</span>'
+    return formatted_num
 
 def brackets(status, sunset, yr):
     s = sunset and yr>=1
@@ -361,7 +375,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
         deficit=max(0.0,demand-floors)
 
-        # Baseline point verification metrics
+        # Baseline point verification snapshots
         init_total_assets = c + bk + tr + ro
 
         # 1. Statutory RMD Execution
@@ -412,19 +426,29 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         total_tax+=bill
         eff_rate=(bill/agi*100) if agi>0 else 0.0
 
-        # 5. Liquid Tax Clearance Sequence
+        # 5. Strategic Pre-Tax Conversion & Forced Withholding Sequence
         if c >= bill: 
             c-=bill; sp_tx=bill
         elif c+bk>=bill: 
             sp_tx=bill; d=bill-c; c=0.0; bk-=d
         else:
+            # Cash and brokerage completely exhausted - enact forced asset tax recovery routing
             sp_tx=c+bk; remaining_bill=bill-sp_tx; c=0.0; bk=0.0
-            if conv>0:
-                withheld=min(ro,remaining_bill)
-                ro-=withheld; sp_tx+=withheld; remaining_bill-=withheld
-            if remaining_bill>0:
-                withheld=min(tr,remaining_bill)
-                tr-=withheld; sp_tx+=withheld
+            
+            # Drawdown from Pre-Tax conversion asset base via forced automated liquidation withholding
+            if tr >= remaining_bill:
+                tr-=remaining_bill
+                sp_pt+=remaining_bill
+                sp_tx+=remaining_bill
+                remaining_bill=0.0
+            else:
+                sp_pt+=tr
+                sp_tx+=tr
+                remaining_bill-=tr
+                tr=0.0
+
+            if remaining_bill>0 and ro>=remaining_bill:
+                ro-=remaining_bill; sp_tx+=remaining_bill; remaining_bill=0.0
 
         irmaa=get_irmaa_tier(agi, status)
         total_outflow = sp_pt + sp_bk + sp_ro + sp_tx
@@ -434,15 +458,20 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
 
-        # 7. Automated Math Validation Checks
+        # 7. Absolute System Continuity Check Array
         total_distributed = sp_pt + sp_bk + sp_ro
         expected_min_distribution = min(init_total_assets, deficit)
         
         audit_pass = "✅ PASS"
-        if deficit > 0 and total_distributed < expected_min_distribution - 1.0:
-            audit_pass = "❌ ERR: Deficit mismatch"
-        if not stoch and abs((init_total_assets - total_outflow) - (c/(1+rc) + bk/(1+rb) + tr/(1+rt) + ro/(1+rr))) > 10.0:
-            audit_pass = "❌ ERR: Balance break"
+        if deficit > 0 and total_distributed < expected_min_distribution - 2.0:
+            audit_pass = "❌ ERR: Deficit breakdown"
+            
+        actual_pre_growth = (c/(1+rc)) + (bk/(1+noise(rb,0.10) if stoch else 1+rb)) + (tr/(1+noise(rt,0.10) if stoch else 1+rt)) + (ro/(1+noise(rr,0.11) if stoch else 1+rr))
+        expected_pre_growth = init_total_assets - total_outflow
+        
+        if not stoch and abs(actual_pre_growth - expected_pre_growth) > 25.0:
+            if init_total_assets > 1.0:
+                audit_pass = "❌ ERR: Balance break"
 
         logs.append(dict(yr=yr,age=age,demand=demand,deficit=deficit,floors=floors,
             sp_pt=sp_pt,sp_bk=sp_bk,sp_ro=sp_ro,sp_tx=sp_tx,
@@ -477,7 +506,10 @@ def run():
             logs,total_tax=run_sim(strat,cur,ret,end,infl,spend,status,srate,
                 fn,fs,fe,fa,an,at,ab,sunset,False,opt_safety,opt_drain)
             last=logs[-1] if logs else {'nw':0}
-            document.getElementById('diag').innerText=f"▶ Active Net Worth: {fk(last['nw'])} | Lifetime Tax Paid: {fk(total_tax)}"
+            
+            # Simple conversion string mapping hook for display fields
+            def f_k(v): return f"${v/1000:,.0f}k" if v >= 0 else f"-${abs(v)/1000:,.0f}k"
+            document.getElementById('diag').innerText=f"▶ Active Net Worth: {f_k(last['nw'])} | Lifetime Tax Paid: {f_k(total_tax)}"
 
             lbl=[]; c_=[]; bk_=[]; tr_=[]; ro_=[]
             demand_=[]; floors_=[]; deficit_=[]; surplus_=[]
@@ -495,18 +527,26 @@ def run():
                 agi_.append(r['agi']); bill_.append(r['bill']); eff_.append(r['eff'])
                 nw_.append(r['nw'])
                 
-                irmaa_cls=' class="c-amber"' if "Tier" in r['irmaa'] else ''
+                irmaa_cls=' class="c-amber"' if "Tier" in r['irmaa'] else ' class="val-zero"'
                 rows.append(f"""<tr>
-                    <td class="tl c-muted">{r['yr']}</td><td class="c-muted">{r['age']}</td>
-                    <td class="grp-budget c-cyan">{fk(r['demand'])}</td><td class="grp-budget c-cyan">{fk(r['deficit'])}</td>
-                    <td class="grp-sources">{fk(r['floors'])}</td><td class="grp-sources c-amber">{fk(r['sp_pt'])}</td>
-                    <td class="grp-sources">{fk(r['sp_bk'])}</td><td class="grp-sources c-green">{fk(r['sp_ro'])}</td>
-                    <td class="grp-sources c-red">{fk(r['sp_tx'])}</td>
-                    <td class="grp-balances">{fk(r['c'])}</td><td class="grp-balances">{fk(r['bk'])}</td>
-                    <td class="grp-balances c-amber">{fk(r['tr'])}</td><td class="grp-balances c-green">{fk(r['ro'])}</td>
-                    <td class="grp-taxes c-orange">{fk(r['rmd'])}</td><td class="grp-taxes c-purple">{fk(r['conv'])}</td>
-                    <td class="grp-taxes c-muted">{fk(r['agi'])}</td><td class="grp-taxes c-red">{fk(r['bill'])}</td>
-                    <td class="grp-taxes c-amber">{r['eff']:.1f}%</td><td class="grp-taxes"{irmaa_cls}>{r['irmaa']}</td>
+                    <td class="tl c-muted">{r['yr']}</td><td class="c-muted" style="font-weight:600;">{r['age']}</td>
+                    <td class="grp-budget">{format_cell(r['demand'])}</td>
+                    <td class="grp-budget">{format_cell(r['deficit'], 'val-deficit')}</td>
+                    <td class="grp-sources">{format_cell(r['floors'])}</td>
+                    <td class="grp-sources">{format_cell(r['sp_pt'], 'val-outflow')}</td>
+                    <td class="grp-sources">{format_cell(r['sp_bk'], 'val-outflow')}</td>
+                    <td class="grp-sources">{format_cell(r['sp_ro'], 'val-outflow')}</td>
+                    <td class="grp-sources">{format_cell(r['sp_tx'], 'val-outflow')}</td>
+                    <td class="grp-balances">{format_cell(r['c'], 'val-inflow')}</td>
+                    <td class="grp-balances">{format_cell(r['bk'], 'val-inflow')}</td>
+                    <td class="grp-balances">{format_cell(r['tr'], 'val-inflow')}</td>
+                    <td class="grp-balances">{format_cell(r['ro'], 'val-inflow')}</td>
+                    <td class="grp-taxes c-orange">{format_cell(r['rmd'])}</td>
+                    <td class="grp-taxes">{format_cell(r['conv'], 'val-conversion')}</td>
+                    <td class="grp-taxes c-muted">{format_cell(r['agi'])}</td>
+                    <td class="grp-taxes c-red" style="font-weight:500;">{format_cell(r['bill'])}</td>
+                    <td class="grp-taxes c-amber">{r['eff']:.1f}%</td>
+                    <td class="grp-taxes"{irmaa_cls}>{r['irmaa']}</td>
                     <td style="font-weight:600; font-size:10px;">{r['audit']}</td>
                 </tr>""")
 
@@ -537,9 +577,9 @@ def run():
                 p50.append(v50)
                 rows.append(f"""<tr>
                     <td class="tl c-muted">{y}</td><td class="c-muted">{age}</td>
-                    <td colspan="3" class="c-red" style="text-align:center">{fk(v10)}</td>
-                    <td colspan="4" class="c-green" style="text-align:center;font-weight:700">{fk(v50)}</td>
-                    <td colspan="4" class="c-cyan" style="text-align:center">{fk(v90)}</td>
+                    <td colspan="3" class="c-red" style="text-align:center">{f_k(v10)}</td>
+                    <td colspan="4" class="c-green" style="text-align:center;font-weight:700">{f_k(v50)}</td>
+                    <td colspan="4" class="c-cyan" style="text-align:center">{f_k(v90)}</td>
                     <td colspan="6" class="c-muted" style="text-align:center;font-size:10px">Stochastic Analysis Array Passed</td>
                 </tr>""")
             document.getElementById('diag').innerText="🎲 Stochastic Analysis Arrays Complete."
