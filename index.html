@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v4.6 (Cascading Liquidation & Max Bracket Fill)</title>
+    <title>Retirement Matrix Engine v4.7 (Diagnostic Ledger Edition)</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -129,7 +129,7 @@
 <body>
 
 <div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.6</h1><p>Cascading Liquidation Rule Matrix · Max Bracket Conversion Fill</p></div>
+    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.7</h1><p>Diagnostic Trace Ledger Mode enabled</p></div>
     <div id="diag">Warming up simulation environment...</div>
 </div>
 
@@ -274,7 +274,7 @@
                         <th class="grp-sources c-amber">Floors</th><th class="grp-sources c-amber">PreTax Out</th><th class="grp-sources">Brokerage Out</th><th class="grp-sources c-green">Roth Out</th><th class="grp-sources c-red">Tax Paid</th>
                         <th class="grp-balances">Cash Reserves</th><th class="grp-balances">Brokerage Asset</th><th class="grp-balances c-amber">PreTax Asset</th><th class="grp-balances c-green">Roth Asset</th>
                         <th class="grp-taxes c-orange">Age RMD</th><th class="grp-taxes c-purple">Conv. Executed</th><th class="grp-taxes c-muted">AGI Metric</th><th class="grp-taxes c-red">Tax Owed</th><th class="grp-taxes c-amber">Eff %</th><th class="grp-taxes">IRMAA Tier</th>
-                        <th style="color:var(--green)">Math Audit</th>
+                        <th style="color:var(--green)">Audit Math &amp; Delta</th>
                     </tr>
                 </thead>
                 <tbody id="results-body">
@@ -462,7 +462,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
 
         irmaa = get_irmaa_tier(agi, status)
         
-        # Aggregate out-of-pocket tracking adjustments
+        # Comprehensive out-of-pocket tracking adjustment 
         total_outflow = (sp_pt - tax_from_pretax) + sp_bk + (sp_ro - tax_from_roth) + sp_tx
 
         # 6. Compound Yield Engine
@@ -470,14 +470,19 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
 
-        # 7. Fixed Micro Accounting Audit Pass
-        audit_pass = "✅ PASS"
+        # 7. Diagnostic Variant Micro Accounting Audit Pass
         actual_pre_growth = (c/(1+rc)) + (bk/(1+noise(rb,0.10) if stoch else 1+rb)) + (tr/(1+noise(rt,0.10) if stoch else 1+rt)) + (ro/(1+noise(rr,0.11) if stoch else 1+rr))
         expected_pre_growth = init_total_assets - total_outflow
         
-        if not stoch and abs(actual_pre_growth - expected_pre_growth) > 5.0:
+        delta = actual_pre_growth - expected_pre_growth
+        
+        if not stoch and abs(delta) > 5.0:
             if init_total_assets > 1.0:
-                audit_pass = "❌ ERR: Balance break"
+                audit_pass = f'<span class="c-red" style="font-weight:600;">❌ ERR (${delta:,.0f})</span>'
+            else:
+                audit_pass = "✅ PASS"
+        else:
+            audit_pass = '<span class="c-green" style="font-weight:600;">✅ PASS</span>'
 
         logs.append(dict(yr=yr,age=age,demand=demand,deficit=deficit,floors=floors,
             sp_pt=sp_pt,sp_bk=sp_bk,sp_ro=sp_ro,sp_tx=sp_tx,
@@ -552,7 +557,7 @@ def run():
                     <td class="grp-taxes c-red" style="font-weight:500;">{format_cell(r['bill'])}</td>
                     <td class="grp-taxes c-amber">{r['eff']:.1f}%</td>
                     <td class="grp-taxes"{irmaa_cls}>{r['irmaa']}</td>
-                    <td style="font-weight:600; font-size:10px;">{r['audit']}</td>
+                    <td style="white-space:nowrap; padding: 2px 8px;">{r['audit']}</td>
                 </tr>""")
 
             document.getElementById('results-body').innerHTML="".join(rows)
