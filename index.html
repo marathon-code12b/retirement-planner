@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v4.5 (High-Contrast Audit Sandbox)</title>
+    <title>Retirement Matrix Engine v4.6 (Cascading Liquidation & Max Bracket Fill)</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -93,12 +93,12 @@
         .ledger tr:hover td{background:var(--surface2);}
         .ledger .tl{text-align:left;}
 
-        /* HIGH READABILITY READ-OUT CLASS SYSTEM */
-        .val-zero { color: #30363d !important; font-weight: 400 !important; } /* Dimmed Zero Formatting */
-        .val-outflow { color: #f87171; font-weight: 500; } /* Soft red reduction output */
-        .val-inflow { color: #4ade80; font-weight: 500; } /* Soft green asset balance */
-        .val-conversion { color: #c084fc; font-weight: 600; } /* High contrast conversion highlight */
-        .val-deficit { color: #fbbf24; font-weight: 500; } /* Attention-grabbing gap requirement */
+        /* CELL HIGHLIGHTING SYSTEM */
+        .val-zero { color: #30363d !important; font-weight: 400 !important; }
+        .val-outflow { color: #f87171; font-weight: 500; }
+        .val-inflow { color: #4ade80; font-weight: 500; }
+        .val-conversion { color: #c084fc; font-weight: 600; }
+        .val-deficit { color: #fbbf24; font-weight: 500; }
 
         /* BOTTOM WORKSPACE: CHART AREA */
         .chart-area{flex:1;display:flex;flex-direction:column;padding:10px 14px 6px;overflow:hidden;background:var(--surface2);min-height:300px;}
@@ -129,7 +129,7 @@
 <body>
 
 <div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.5</h1><p>Strategic Sandbox Mode · Pre-Tax Withholding Logic Matrix</p></div>
+    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.6</h1><p>Cascading Liquidation Rule Matrix · Max Bracket Conversion Fill</p></div>
     <div id="diag">Warming up simulation environment...</div>
 </div>
 
@@ -190,16 +190,16 @@
             <div><label>Bracket Ceiling</label>
                 <select id="target_bracket">
                     <option value="0.00">No Conversions</option>
-                    <option value="0.12" selected>Top 12% / 15%</option>
-                    <option value="0.22">Top 22% / 25%</option>
-                    <option value="0.24">Top 24% / 28%</option>
-                    <option value="MAX_FAST">Max Accelerated</option>
+                    <option value="0.12" selected>Top 12% / 15% Bracket</option>
+                    <option value="0.22">Top 22% / 25% Bracket</option>
+                    <option value="0.24">Top 24% / 28% Bracket</option>
+                    <option value="MAX_FAST">Max Accelerated Space</option>
                 </select>
             </div>
             <div><label>Tax Sunset</label>
                 <select id="tax_regime_mode">
                     <option value="CURRENT">Freeze TCJA</option>
-                    <option value="SUNSET" selected>2026 Sunset</option>
+                    <option value="SUNSET" selected>2026 Sunset Rules</option>
                 </select>
             </div>
         </div>
@@ -239,8 +239,8 @@
         <div class="sandbox-card">
             <h4>🎯 Cash Tax Optimizer</h4>
             <p>Balances pre-tax burn rate against cash/brokerage liquid asset protection limits.</p>
-            <button class="s-opt-btn active" id="opt-safety" onclick="toggleSandboxOpt('safety')">🛡️ Lock 2-Yr Cash Safety Runway</button>
-            <button class="s-opt-btn" id="opt-drain" onclick="toggleSandboxOpt('drain')">⚡ Objective: Total Pre-Tax Pre-RMD Drain</button>
+            <button class="s-opt-btn" id="opt-safety" onclick="toggleSandboxOpt('safety')">🛡️ Lock 2-Yr Cash Safety Runway</button>
+            <button class="s-opt-btn active" id="opt-drain" onclick="toggleSandboxOpt('drain')">⚡ Objective: Total Pre-Tax Pre-RMD Drain</button>
         </div>
 
         <div class="sandbox-card">
@@ -314,7 +314,6 @@ def sf(eid,d):
     try: return float(document.getElementById(eid).value)
     except: return d
 
-# Advanced structural string compiler with conditional high-readability css hooks
 def format_cell(v, style_class=""):
     if v == 0.0 or abs(v) < 0.01:
         return '<span class="val-zero">—</span>'
@@ -375,10 +374,9 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
         deficit=max(0.0,demand-floors)
 
-        # Baseline point verification snapshots
         init_total_assets = c + bk + tr + ro
 
-        # 1. Statutory RMD Execution
+        # 1. Statutory RMD Target Execution
         rmd=0.0
         f=rmd_factor(age)
         if f>0 and tr>0: rmd=min(tr,tr/f)
@@ -387,7 +385,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         rem=deficit-rmd
         if rem<0: c+=abs(rem); rem=0.0
 
-        # 2. Sequential Drawdown Algorithm
+        # 2. Sequential Drawdown Cascade
         if rem>0:
             d=min(bk,rem); sp_bk=d; bk-=d; rem-=d
         if rem>0:
@@ -395,7 +393,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if rem>0:
             d=min(ro,rem); sp_ro=d; ro-=d; rem-=d
 
-        # 3. Enhanced Sandbox Optimization Loop
+        # 3. Dynamic Roth Conversion Engine - Maximize Specified Bracket Capacity
         conv=0.0
         current_liq = c + bk
         
@@ -403,62 +401,73 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if opt_drain and age <= 72:
             active_strat = "0.24" 
 
-        safety_allows = True
+        safety_allows = true
         if opt_safety and current_liq < (demand * 0.3):
-            safety_allows = False
+            safety_allows = false
 
         if age <= 72 and active_strat != "0.00" and safety_allows and tr > 0:
-            bkts,rates,ded=brackets(status,sunset,yr)
+            bkts,rates,ded = brackets(status,sunset,yr)
             tpct = 0.99 if active_strat=="MAX_FAST" else float(active_strat)
-            lim=0.0
-            for bi,rv in enumerate(rates):
-                if rv<=tpct: lim=bkts[bi] if bi<len(bkts) else bkts[-1]*1.5
-            base=floors+sp_pt
-            room=max(0.0,(lim+ded)-base)
-            if room>0: 
-                conv=min(tr,room)
-                tr-=conv
-                ro+=conv
-
-        # 4. Tax Evaluation Matrix
-        agi=floors+sp_pt+conv
-        bill=tax_calc(agi,status,sunset,yr,srate)
-        total_tax+=bill
-        eff_rate=(bill/agi*100) if agi>0 else 0.0
-
-        # 5. Strategic Pre-Tax Conversion & Forced Withholding Sequence
-        if c >= bill: 
-            c-=bill; sp_tx=bill
-        elif c+bk>=bill: 
-            sp_tx=bill; d=bill-c; c=0.0; bk-=d
-        else:
-            # Cash and brokerage completely exhausted - enact forced asset tax recovery routing
-            sp_tx=c+bk; remaining_bill=bill-sp_tx; c=0.0; bk=0.0
             
-            # Drawdown from Pre-Tax conversion asset base via forced automated liquidation withholding
+            # Find the exact ceiling of the specified tax bracket rate
+            target_ceiling = 0.0
+            for bi, rv in enumerate(rates):
+                if rv <= tpct:
+                    target_ceiling = bkts[bi] if bi < len(bkts) else bkts[-1] * 1.5
+            
+            # Base AGI before adding conversions
+            base_agi = floors + sp_pt
+            # Target AGI limit = Bracket Taxable Ceiling + Standard Deduction
+            target_agi_limit = target_ceiling + ded
+            
+            room = max(0.0, target_agi_limit - base_agi)
+            if room > 0: 
+                conv = min(tr, room)
+                tr -= conv
+                ro += conv
+
+        # 4. Tax Evaluation Loop
+        agi = floors + sp_pt + conv
+        bill = tax_calc(agi,status,sunset,yr,srate)
+        total_tax += bill
+        eff_rate = (bill/agi*100) if agi>0 else 0.0
+
+        # 5. Liquidation Hierarchy for Tax Clearance (Pay from pre-tax ONLY if liquid asset cushion hits 0)
+        if c >= bill: 
+            c -= bill; sp_tx = bill
+        elif (c + bk) >= bill: 
+            sp_tx = bill
+            bill -= c; c = 0.0
+            bk -= bill
+        else:
+            # Liquid assets completely wiped out -> Enact automated Pre-Tax emergency tax withholding
+            sp_tx = c + bk
+            remaining_bill = bill - sp_tx
+            c = 0.0; bk = 0.0
+            
             if tr >= remaining_bill:
-                tr-=remaining_bill
-                sp_pt+=remaining_bill
-                sp_tx+=remaining_bill
-                remaining_bill=0.0
+                tr -= remaining_bill
+                sp_pt += remaining_bill
+                sp_tx += remaining_bill
+                remaining_bill = 0.0
             else:
-                sp_pt+=tr
-                sp_tx+=tr
-                remaining_bill-=tr
-                tr=0.0
+                sp_pt += tr
+                sp_tx += tr
+                remaining_bill -= tr
+                tr = 0.0
 
-            if remaining_bill>0 and ro>=remaining_bill:
-                ro-=remaining_bill; sp_tx+=remaining_bill; remaining_bill=0.0
+            if remaining_bill > 0 and ro >= remaining_bill:
+                ro -= remaining_bill; sp_tx += remaining_bill; remaining_bill = 0.0
 
-        irmaa=get_irmaa_tier(agi, status)
+        irmaa = get_irmaa_tier(agi, status)
         total_outflow = sp_pt + sp_bk + sp_ro + sp_tx
 
-        # 6. Returns Compounding Engine
+        # 6. Compound Yield Engine
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
 
-        # 7. Absolute System Continuity Check Array
+        # 7. Float-Tolerant Accounting Audit Pass
         total_distributed = sp_pt + sp_bk + sp_ro
         expected_min_distribution = min(init_total_assets, deficit)
         
@@ -507,7 +516,6 @@ def run():
                 fn,fs,fe,fa,an,at,ab,sunset,False,opt_safety,opt_drain)
             last=logs[-1] if logs else {'nw':0}
             
-            # Simple conversion string mapping hook for display fields
             def f_k(v): return f"${v/1000:,.0f}k" if v >= 0 else f"-${abs(v)/1000:,.0f}k"
             document.getElementById('diag').innerText=f"▶ Active Net Worth: {f_k(last['nw'])} | Lifetime Tax Paid: {f_k(total_tax)}"
 
