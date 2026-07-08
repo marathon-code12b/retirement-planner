@@ -463,7 +463,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         irmaa = get_irmaa_tier(agi, status)
         
         # Comprehensive out-of-pocket tracking adjustment 
-        total_outflow = (sp_pt - tax_from_pretax) + sp_bk + (sp_ro - tax_from_roth) + sp_tx
+        total_outflow = (sp_pt - tax_from_pretax) + sp_bk + (sp_ro - tax_from_roth) + bill
 
         # 6. Compound Yield Engine
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
