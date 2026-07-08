@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v3.8</title>
+    <title>Retirement Matrix Engine v4.0 (Boldin Optimized)</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -32,7 +32,7 @@
         #diag{margin-left:auto;background:#0d2b1a;border:1px solid #1a4a2e;color:var(--green);font-size:11px;padding:4px 10px;border-radius:20px;font-family:'IBM Plex Mono',monospace;max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
         /* LAYOUT */
-        .layout{display:grid;grid-template-columns:288px 1fr;height:calc(100vh - 45px);}
+        .layout{display:grid;grid-template-columns:310px 1fr;height:calc(100vh - 45px);}
         .sidebar{border-right:1px solid var(--border);overflow-y:auto;background:var(--surface);}
         .main{display:flex;flex-direction:column;overflow-y:auto;height:100%;}
 
@@ -94,7 +94,12 @@
         .c-red{color:var(--red);}
         .c-purple{color:var(--purple);}
         .c-orange{color:var(--orange);}
-        .hide-budget .grp-budget, .hide-sources .grp-sources, .hide-balances .grp-balances, .hide-taxes .grp-taxes{display:none;}
+        
+        /* Column Hiding Engine Styles */
+        .hide-budget .grp-budget, 
+        .hide-sources .grp-sources, 
+        .hide-balances .grp-balances, 
+        .hide-taxes .grp-taxes { display:none !important; }
 
         @media(max-width:950px){
             .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr;}
@@ -108,8 +113,8 @@
 <body>
 
 <div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v3.8</h1><p>Top-Down Ledger Matrix Workspace · Fixed Age 73 Conversion Horizon Override</p></div>
-    <div id="diag">Configuration idle — execute simulation logic to render arrays.</div>
+    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.0</h1><p>Boldin Strategy Core · Automated Tax-Valley Roth Bracket Filler Optimization</p></div>
+    <div id="diag">Loading mathematical runtime environment...</div>
 </div>
 
 <div class="layout">
@@ -117,7 +122,7 @@
 <!-- ══ SIDEBAR CONTROLS ══ -->
 <div class="sidebar"><div class="sb">
 
-    <button class="brun" onclick="triggerEngine()">⚡ RUN INTEGRATED MATRIX</button>
+    <button class="brun" id="run-btn" onclick="triggerEngine()">⚡ RUN INTEGRATED MATRIX</button>
 
     <div class="slabel">Simulation Mode</div>
     <div class="g2">
@@ -148,15 +153,14 @@
         <div><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.001" value="0.025"></div>
     </div>
 
-    <div class="slabel" style="margin-top:8px">Tax Strategy &amp; Higher Brackets</div>
+    <div class="slabel" style="margin-top:8px">Tax Strategy (Tax Valleys)</div>
     <div class="g2">
         <div><label>Conversion Ceiling</label>
             <select id="target_bracket">
-                <option value="0.12">Top 12% / 15%</option>
+                <option value="0.00">No Conversions</option>
+                <option value="0.12" selected>Top 12% / 15%</option>
                 <option value="0.22">Top 22% / 25%</option>
-                <option value="0.24" selected>Top 24% / 28%</option>
-                <option value="0.32">Top 32% (Aggressive)</option>
-                <option value="0.35">Top 35% (Max Mitigate)</option>
+                <option value="0.24">Top 24% / 28%</option>
                 <option value="MAX_FAST">Max Fast Liquidate</option>
             </select>
         </div>
@@ -236,14 +240,14 @@
         </div>
 
         <div class="ledger" id="ledger">
-            <table>
+            <table id="ledger-table">
                 <thead id="ledger-head">
                     <tr>
                         <th class="tl">Yr</th><th>Age</th>
                         <th class="grp-budget c-cyan">Gross Need</th><th class="grp-budget c-cyan">Portfolio Deficit</th>
                         <th class="grp-sources c-amber">Income Floors</th><th class="grp-sources c-amber">PreTax Out</th><th class="grp-sources">Brokerage Out</th><th class="grp-sources c-green">Roth Out</th><th class="grp-sources c-red">Tax Settle</th>
                         <th class="grp-balances">Cash Liq</th><th class="grp-balances">Brokerage Portfolio</th><th class="grp-balances c-amber">PreTax Account</th><th class="grp-balances c-green">Roth Account</th>
-                        <th class="grp-taxes c-orange">Age RMD</th><th class="grp-taxes c-purple">Executed Conv.</th><th class="grp-taxes c-muted">Adjusted AGI</th><th class="grp-taxes c-red">Calculated Tax</th><th class="grp-taxes c-amber">Eff %</th><th class="grp-taxes">IRMAA</th>
+                        <th class="grp-taxes c-orange">Age RMD</th><th class="grp-taxes c-purple">Executed Conv.</th><th class="grp-taxes c-muted">Adjusted AGI</th><th class="grp-taxes c-red">Calculated Tax</th><th class="grp-taxes c-amber">Eff %</th><th class="grp-taxes">IRMAA Status</th>
                     </tr>
                 </thead>
                 <tbody id="results-body">
@@ -282,7 +286,7 @@
 </div>
 </div>
 
-<!-- ══ FIXED PYTHON SIMULATION ENGINE ══ -->
+<!-- ══ PYTHON PROBABILISTIC SIMULATION ENGINE ══ -->
 <script type="text/python">
 import js, json
 from js import document, window
@@ -321,6 +325,16 @@ def rmd_factor(age):
          93:10.1,94:9.5,95:8.9}
     return tbl.get(age,8.0)
 
+def get_irmaa_tier(agi, status):
+    # Boldin Core Standard Ruleset for Single & MFJ Profiles
+    if status == "MFJ":
+        if agi > 322000: return "⚠️ Tier 2"
+        if agi > 258000: return "⚠️ Tier 1"
+    else:
+        if agi > 206000: return "⚠️ Tier 2"
+        if agi > 103000: return "⚠️ Tier 1"
+    return "—"
+
 def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
             fn,fs,fe,fa, ot,oa,oamt, an,at,ab,ar, sunset,stoch):
     c=sum(b for t,b in zip(at,ab) if t=="Cash")
@@ -343,7 +357,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
         deficit=max(0.0,demand-floors)
 
-        # 1. RMD Extraction
+        # 1. RMD Core Calculation
         rmd=0.0
         f=rmd_factor(age)
         if f>0 and tr>0: rmd=min(tr,tr/f)
@@ -352,7 +366,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         rem=deficit-rmd
         if rem<0: c+=abs(rem); rem=0.0
 
-        # 2. Income/Expense Drawdown Cascade
+        # 2. Portfolio Sequencing Cascades
         if rem>0:
             d=min(bk,rem); sp_bk=d; bk-=d; rem-=d
         if rem>0:
@@ -360,10 +374,9 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if rem>0:
             d=min(ro,rem); sp_ro=d; ro-=d; rem-=d
 
-        # 3. FIXED AGE 73 OVERRIDE ROTATION ENGINE
+        # 3. Boldin Tax-Valley Optimization Engines
         conv=0.0
-        # Conversions run uninterrupted until 2 years before RMD age (Age 71 maximum limit)
-        if age <= 71 and strategy != "MAX_FAST" and tr > 0:
+        if age <= 72 and strategy != "MAX_FAST" and strategy != "0.00" and tr > 0:
             bkts,rates,ded=brackets(status,sunset,yr)
             tpct=float(strategy)
             lim=0.0
@@ -375,35 +388,32 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
                 conv=min(tr,room)
                 tr-=conv
                 ro+=conv
-        elif age <= 71 and strategy=="MAX_FAST" and tr>0:
+        elif age <= 72 and strategy=="MAX_FAST" and tr>0:
             conv=tr; tr=0.0; ro+=conv
 
-        # 4. Calculate Final Tax Owed
+        # 4. Tax Ledger Compilation
         agi=floors+sp_pt+conv
         bill=tax_calc(agi,status,sunset,yr,srate)
         total_tax+=bill
         eff_rate=(bill/agi*100) if agi>0 else 0.0
 
-        # 5. NET-OF-TAX CORRECTION LOGIC (Prevents premature conversion crashes)
+        # 5. Net-of-Tax Adjustments
         if c>=bill: 
             c-=bill; sp_tx=bill
         elif c+bk>=bill: 
             sp_tx=bill; d=bill-c; c=0.0; bk-=d
         else:
-            # If outside brokerage and cash dry up, pull conversion taxes directly from asset loops
             sp_tx=c+bk; remaining_bill=bill-sp_tx; c=0.0; bk=0.0
             if conv>0:
-                # Readjust the newly added Roth balance down to reflect automated tax withholding
                 withheld=min(ro,remaining_bill)
                 ro-=withheld; sp_tx+=withheld; remaining_bill-=withheld
             if remaining_bill>0:
-                # Claw back remaining balance out of the underlying Pre-Tax container directly
                 withheld=min(tr,remaining_bill)
                 tr-=withheld; sp_tx+=withheld
 
-        irmaa="⚠️" if agi>206000 else "—"
+        irmaa=get_irmaa_tier(agi, status)
 
-        # 6. Apply Compounding Rates of Return
+        # 6. Compounding Processing Loops
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
@@ -442,7 +452,7 @@ def run():
             logs,total_tax=run_sim(strat,cur,ret,end,infl,spend,status,srate,
                 fn,fs,fe,fa,ot,oa,oamt,an,at,ab,ar,sunset,False)
             last=logs[-1]
-            bl=f"Ceiling {int(float(strat)*100)}%" if strat!="MAX_FAST" else "Max Liquidation"
+            bl=f"Ceiling {int(float(strat)*100)}%" if (strat!="MAX_FAST" and strat!="0.00") else ("No Conversion" if strat=="0.00" else "Max Liquidation")
             document.getElementById('diag').innerText=f"▶ {bl} | End Net Worth: {fk(last['nw'])} | Lifetime Income Tax: {fk(total_tax)}"
 
             lbl=[]; c_=[]; bk_=[]; tr_=[]; ro_=[]
@@ -462,7 +472,7 @@ def run():
                 rmd_.append(r['rmd']); conv_.append(r['conv'])
                 agi_.append(r['agi']); bill_.append(r['bill']); eff_.append(r['eff'])
                 nw_.append(r['nw'])
-                irmaa_cls=' class="c-amber"' if r['irmaa']!="—" else ''
+                irmaa_cls=' class="c-amber"' if "Tier" in r['irmaa'] else ''
                 rows.append(f"""<tr>
                     <td class="tl c-muted">{r['yr']}</td><td class="c-muted">{r['age']}</td>
                     <td class="grp-budget c-cyan">{fk(r['demand'])}</td><td class="grp-budget c-cyan">{fk(r['deficit'])}</td>
@@ -517,13 +527,14 @@ def run():
                     <td colspan="3" class="c-red" style="text-align:center">{fk(v10)}</td>
                     <td colspan="4" class="c-green" style="text-align:center;font-weight:700">{fk(v50)}</td>
                     <td colspan="4" class="c-cyan" style="text-align:center">{fk(v90)}</td>
-                    <td colspan="5" class="c-muted" style="text-align:center;font-size:10px">1,000 runs structural paths</td>
+                    <td colspan="5" class="c-muted" style="text-align:center;font-size:10px">Stochastic Structural Convergence</td>
                 </tr>""")
-            document.getElementById('diag').innerText=f"🎲 Monte Carlo Engine Complete · {pct:.1f}% Portfolio Success Velocity over 1,000 paths"
+            document.getElementById('diag').innerText=f"🎲 Monte Carlo Engine Complete · {pct:.1f}% Success Probability over 1,000 runs."
             document.getElementById('results-body').innerHTML="".join(rows)
             window.loadChartData(True,
-                json.dumps(lbl),json.dumps(p10),json.dumps(p50),json.dumps(p90),
-                "[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]")
+                json.dumps(lbl),json.dumps(p50),
+                json.dumps(p10),json.dumps(p50),json.dumps(p90),"[]",
+                "[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]")
 
     except Exception as e:
         window.alert(f"Execution Error: {str(e)}")
@@ -532,13 +543,19 @@ window.execute_sim=run
 </script>
 
 <script>
+// Pyodide Core Loader Engine Implementation Blueprint
 let pyScript = document.createElement('script');
 pyScript.src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
 document.head.appendChild(pyScript);
 pyScript.onload=async()=>{
-    let py=await loadPyodide();
-    await py.loadPackage("micropip");
-    document.querySelectorAll("script[type='text/python']").forEach(s=>py.runPython(s.textContent));
+    try {
+        let py=await loadPyodide();
+        await py.loadPackage("micropip");
+        document.querySelectorAll("script[type='text/python']").forEach(s=>py.runPython(s.textContent));
+        document.getElementById('diag').innerText = "Mathematical environment online. Ready for execution.";
+    } catch(err) {
+        document.getElementById('diag').innerText = "Fault detected during engine loading sequence.";
+    }
 };
 
 let chart=null;
@@ -581,10 +598,11 @@ function buildChart(){
     });
 
     if(isStoch){
+        // Map stochastic properties to correct coordinate vectors
         datasets=[
-            line('10th Percentile Floor',D.c,'#f85149',{borderDash:[4,4]}),
-            line('50th Percentile Median Path',D.bk,'#3fb950',{borderWidth:2.5}),
-            line('90th Percentile High Horizon',D.tr,'#58a6ff',{borderDash:[4,4]})
+            line('10th Percentile (Downside)',D.c,'#f85149',{borderDash:[4,4]}),
+            line('50th Percentile (Median)',D.bk,'#3fb950',{borderWidth:2.5}),
+            line('90th Percentile (Upside Target)',D.tr,'#58a6ff',{borderDash:[4,4]})
         ];
     } else {
         switch(view){
@@ -624,10 +642,13 @@ function buildChart(){
                 ]; chartType='bar'; break;
             case 'EFF_RATE': datasets=[line('Effective Consolidated Tax %',D.eff,'#f85149',{borderWidth:2.5})]; break;
             case 'IRMAA_AGI':
+                const isMFJ = document.getElementById('filing_status').value === 'MFJ';
+                const t1 = isMFJ ? 258000 : 103000;
+                const t2 = isMFJ ? 322000 : 206000;
                 datasets=[
                     line('Calculated Target AGI',D.agi,'#79c0ff',{borderWidth:2}),
-                    {type:'line',label:'IRMAA Threshold Tier 1 ($206k)',data:slice(D.agi).map(()=>206000),borderColor:'rgba(248,81,73,0.6)',borderDash:[5,3],pointRadius:0},
-                    {type:'line',label:'IRMAA Threshold Tier 2 ($258k)',data:slice(D.agi).map(()=>258000),borderColor:'rgba(210,153,34,0.6)',borderDash:[5,3],pointRadius:0}
+                    {type:'line',label:`IRMAA Threshold Tier 1 ($${Math.round(t1/1000)}k)`,data:slice(D.agi).map(()=>t1),borderColor:'rgba(248,81,73,0.6)',borderDash:[5,3],pointRadius:0},
+                    {type:'line',label:`IRMAA Threshold Tier 2 ($${Math.round(t2/1000)}k)`,data:slice(D.agi).map(()=>t2),borderColor:'rgba(210,153,34,0.6)',borderDash:[5,3],pointRadius:0}
                 ]; break;
         }
     }
@@ -653,6 +674,29 @@ function buildChart(){
     });
 }
 
+// Global UI Action Hooks
+window.toggleModeUI = function() {
+    const s=document.getElementById('simulation_mode').value==='STOCHASTIC';
+    document.querySelectorAll('.vtab:not([data-view="NET_WORTH"])').forEach(b=>{
+        b.style.opacity=s?'.35':'1'; b.style.pointerEvents=s?'none':'auto';
+    });
+};
+
+window.setWindow = function(y) {
+    winYrs=y;
+    document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tbtn').forEach(b=>{
+        if(y && b.textContent.trim().startsWith(y+'')) b.classList.add('active');
+        if(!y && b.textContent.trim().startsWith('Full')) b.classList.add('active');
+    });
+    buildChart();
+};
+
+window.toggleCol = function(g) {
+    document.getElementById('ledger-table').classList.toggle('hide-'+g);
+    document.getElementById('tog-'+g).classList.toggle('active');
+};
+
 document.querySelectorAll('.vtab').forEach(btn=>{
     btn.addEventListener('click',()=>{
         document.querySelectorAll('.vtab').forEach(b=>b.classList.remove('active'));
@@ -661,26 +705,6 @@ document.querySelectorAll('.vtab').forEach(btn=>{
     });
 });
 
-function setWindow(y){
-    winYrs=y;
-    document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
-    const lbl=y?y+'Y':'Full Projection Lifetime';
-    document.querySelectorAll('.tbtn').forEach(b=>{if(b.textContent.trim().startsWith(y||'Full'))b.classList.add('active');});
-    buildChart();
-}
-
-const colState={budget:true,sources:true,balances:true,taxes:true};
-function toggleCol(g){
-    colState[g]=!colState[g];
-    document.querySelector('#ledger table').classList.toggle('hide-'+g,!colState[g]);
-    document.getElementById('tog-'+g).classList.toggle('active',colState[g]);
-}
-function toggleModeUI(){
-    const s=document.getElementById('simulation_mode').value==='STOCHASTIC';
-    document.querySelectorAll('.vtab:not([data-view="NET_WORTH"])').forEach(b=>{
-        b.style.opacity=s?'.35':'1'; b.style.pointerEvents=s?'none':'auto';
-    });
-}
 function addFloorRow(){
     document.getElementById('income-floor-body').insertAdjacentHTML('beforeend',`<tr>
         <td class="tl"><input type="text" class="floor-name" value="Annuity Payout"></td>
@@ -704,7 +728,7 @@ function addAccountRow(){
         <td><input type="number" class="acc-return" step="0.01" value="0.07"></td>
         <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
 }
-function triggerEngine(){if(window.execute_sim)window.execute_sim();}
+function triggerEngine(){ if(window.execute_sim) window.execute_sim(); }
 </script>
 </body>
 </html>
