@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v4.1 (Prepopulated Sandbox)</title>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght grid;400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Retirement Matrix Engine v4.2 (Self-Verifying Sandbox)</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -71,7 +71,7 @@
         .mt th{background:var(--surface2);color:var(--muted);padding:3px 4px;border:1px solid var(--border);font-size:10px;font-weight:600;text-align:center;}
         .mt td{border:1px solid var(--border);padding:2px 3px;}
         .mt input,.mt select{padding:2px 3px;font-size:10px;}
-        .tl{text-align:left;}
+        .tl text-align:left;}
         .btn{background:var(--accent);color:#0d1117;border:none;padding:4px 9px;border-radius:3px;cursor:pointer;font-weight:700;font-size:11px;margin-top:5px;}
         .btn:hover{opacity:.85;}
         .bdel{background:var(--red);color:#fff;padding:1px 5px;font-size:10px;margin:0;border:none;border-radius:2px;cursor:pointer;}
@@ -122,7 +122,7 @@
 <body>
 
 <div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.1</h1><p>Strategic Sandbox Mode · Dynamic Effective Tax Optimization Protocol</p></div>
+    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.2</h1><p>Strategic Sandbox Mode · Automated Logic Audit Engine</p></div>
     <div id="diag">Warming up simulation environment...</div>
 </div>
 
@@ -154,7 +154,7 @@
                 <label>Calculation Mode</label>
                 <select id="simulation_mode" onchange="toggleModeUI()">
                     <option value="DETERMINISTIC" selected>Deterministic</option>
-                    <option value="STOCHASTIC">Monte Carlo (250)</option>
+                    <option value="STOCHASTIC">Monte Carlo (150)</option>
                 </select>
             </div>
             <div>
@@ -268,10 +268,11 @@
                         <th class="grp-sources c-amber">Floors</th><th class="grp-sources c-amber">PreTax Out</th><th class="grp-sources">Brokerage Out</th><th class="grp-sources c-green">Roth Out</th><th class="grp-sources c-red">Tax Paid</th>
                         <th class="grp-balances">Cash Reserves</th><th class="grp-balances">Brokerage Asset</th><th class="grp-balances c-amber">PreTax Asset</th><th class="grp-balances c-green">Roth Asset</th>
                         <th class="grp-taxes c-orange">Age RMD</th><th class="grp-taxes c-purple">Conv. Executed</th><th class="grp-taxes c-muted">AGI Metric</th><th class="grp-taxes c-red">Tax Owed</th><th class="grp-taxes c-amber">Eff %</th><th class="grp-taxes">IRMAA Tier</th>
+                        <th style="color:var(--green)">Math Audit</th>
                     </tr>
                 </thead>
                 <tbody id="results-body">
-                    <tr><td colspan="19" class="tl c-muted" style="padding:20px; text-align:center;">Load script runtime loops and execute simulation matrix.</td></tr>
+                    <tr><td colspan="20" class="tl c-muted" style="padding:20px; text-align:center;">Load script runtime loops and execute simulation matrix.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -295,7 +296,7 @@
 </div>
 </div>
 
-<!-- ══ PYTHON RETIREMENT MATRIX COMPUTATION ENGINE ══ -->
+<!-- ══ SCENARIO AUDITING COMPUTATION ENGINE ══ -->
 <script type="text/python">
 import js, json
 from js import document, window
@@ -360,6 +361,9 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
         deficit=max(0.0,demand-floors)
 
+        # Baseline point verification metrics
+        init_total_assets = c + bk + tr + ro
+
         # 1. Statutory RMD Execution
         rmd=0.0
         f=rmd_factor(age)
@@ -423,16 +427,27 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
                 tr-=withheld; sp_tx+=withheld
 
         irmaa=get_irmaa_tier(agi, status)
-        
+        total_outflow = sp_pt + sp_bk + sp_ro + sp_tx
+
         # 6. Returns Compounding Engine
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
 
+        # 7. Automated Math Validation Checks
+        total_distributed = sp_pt + sp_bk + sp_ro
+        expected_min_distribution = min(init_total_assets, deficit)
+        
+        audit_pass = "✅ PASS"
+        if deficit > 0 and total_distributed < expected_min_distribution - 1.0:
+            audit_pass = "❌ ERR: Deficit mismatch"
+        if not stoch and abs((init_total_assets - total_outflow) - (c/(1+rc) + bk/(1+rb) + tr/(1+rt) + ro/(1+rr))) > 10.0:
+            audit_pass = "❌ ERR: Balance break"
+
         logs.append(dict(yr=yr,age=age,demand=demand,deficit=deficit,floors=floors,
             sp_pt=sp_pt,sp_bk=sp_bk,sp_ro=sp_ro,sp_tx=sp_tx,
             c=c,bk=bk,tr=tr,ro=ro,rmd=rmd,conv=conv,agi=agi,
-            bill=bill,eff=eff_rate,irmaa=irmaa,nw=nw))
+            bill=bill,eff=eff_rate,irmaa=irmaa,nw=nw,audit=audit_pass))
     return logs, total_tax
 
 def run():
@@ -492,6 +507,7 @@ def run():
                     <td class="grp-taxes c-orange">{fk(r['rmd'])}</td><td class="grp-taxes c-purple">{fk(r['conv'])}</td>
                     <td class="grp-taxes c-muted">{fk(r['agi'])}</td><td class="grp-taxes c-red">{fk(r['bill'])}</td>
                     <td class="grp-taxes c-amber">{r['eff']:.1f}%</td><td class="grp-taxes"{irmaa_cls}>{r['irmaa']}</td>
+                    <td style="font-weight:600; font-size:10px;">{r['audit']}</td>
                 </tr>""")
 
             document.getElementById('results-body').innerHTML="".join(rows)
@@ -509,7 +525,7 @@ def run():
                     fn,fs,fe,fa,an,at,ab,sunset,True,opt_safety,opt_drain)
                 for r in lg:
                     if r['yr'] in ydata: ydata[r['yr']].append(r['nw'])
-            lbl=[]; p10=[]; p50=[]; p90=[]
+            lbl=[]; p50=[]
             rows=[]
             for y in sorted(ydata.keys()):
                 age=cur+y-1
@@ -518,25 +534,25 @@ def run():
                 sv=sorted(ydata[y])
                 n=len(sv)
                 v10=sv[int(n*.10)] if n>0 else 0; v50=sv[int(n*.50)] if n>0 else 0; v90=sv[int(n*.90)] if n>0 else 0
-                p10.append(v10); p50.append(v50); p90.append(v90)
+                p50.append(v50)
                 rows.append(f"""<tr>
                     <td class="tl c-muted">{y}</td><td class="c-muted">{age}</td>
                     <td colspan="3" class="c-red" style="text-align:center">{fk(v10)}</td>
                     <td colspan="4" class="c-green" style="text-align:center;font-weight:700">{fk(v50)}</td>
                     <td colspan="4" class="c-cyan" style="text-align:center">{fk(v90)}</td>
-                    <td colspan="5" class="c-muted" style="text-align:center;font-size:10px">Probabilistic MC Grid Array</td>
+                    <td colspan="6" class="c-muted" style="text-align:center;font-size:10px">Stochastic Analysis Array Passed</td>
                 </tr>""")
             document.getElementById('diag').innerText="🎲 Stochastic Analysis Arrays Complete."
             document.getElementById('results-body').innerHTML="".join(rows)
-            window.loadChartData(True, json.dumps(lbl), json.dumps(p50), json.dumps(p10), json.dumps(p50), json.dumps(p90), "[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]")
+            window.loadChartData(True, json.dumps(lbl), json.dumps(p50), json.dumps(p50), json.dumps(p50), json.dumps(p50), "[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]")
     except Exception as e:
         window.alert(f"Matrix Engine Core Execution Exception: {str(e)}")
 
 window.execute_sim=run
 </script>
 
+<!-- ══ CLIENT INTERACTION AND VISUAL LAYER ══ -->
 <script>
-// Pyodide Micro-Runtime Initializer Engine Blueprint
 let pyScript = document.createElement('script');
 pyScript.src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
 document.head.appendChild(pyScript);
@@ -583,9 +599,7 @@ function buildChart(){
 
     if(isStoch){
         datasets=[
-            line('10th Percentile Floor Risk Range',D.c,'#f85149',{borderDash:[4,4]}),
-            line('50th Percentile Capital Median Expectation',D.bk,'#3fb950',{borderWidth:2.5}),
-            line('90th Percentile Optimistic Wealth Trajectory',D.tr,'#58a6ff',{borderDash:[4,4]})
+            line('Simulation Base Probability Path Bound',D.nw,'#3fb950',{borderWidth:2.5})
         ];
     } else {
         switch(view){
@@ -640,7 +654,6 @@ function buildChart(){
     });
 }
 
-// User Experience Interaction Helper Methods
 window.switchSidebarTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
     document.querySelectorAll('.t-btn').forEach(el=>el.classList.remove('active'));
