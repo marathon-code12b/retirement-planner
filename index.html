@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v4.1 (Optimization Sandbox)</title>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Retirement Matrix Engine v4.1 (Prepopulated Sandbox)</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght grid;400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -31,24 +31,28 @@
         .hdr p{font-size:11px;color:var(--muted);}
         #diag{margin-left:auto;background:#0d2b1a;border:1px solid #1a4a2e;color:var(--green);font-size:11px;padding:4px 10px;border-radius:20px;font-family:'IBM Plex Mono',monospace;max-width:45vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
+        /* PRESET SECTION PANEL */
+        .preset-bar{background:rgba(88,166,255,0.05);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;}
+        .preset-title{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;}
+        .preset-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+        .p-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px;font-size:11px;border-radius:4px;cursor:pointer;font-family:'IBM Plex Mono',monospace;text-align:center;transition:all 0.15s;}
+        .p-btn:hover{border-color:var(--accent);background:var(--surface);}
+
         /* TAB SYSTEM FOR SIDEBAR */
         .tab-nav{display:flex;background:var(--surface2);border-bottom:1px solid var(--border);}
         .t-btn{flex:1;padding:8px;background:transparent;border:none;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;text-align:center;border-bottom:2px solid transparent;}
         .t-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(88,166,255,0.05);font-weight:600;}
 
         /* LAYOUT */
-        .layout{display:grid;grid-template-columns:330px 1fr;height:calc(100vh - 47px);}
+        .layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 47px);}
         .sidebar{border-right:1px solid var(--border);overflow-y:auto;background:var(--surface);display:flex;flex-direction:column;}
         .tab-content{padding:10px 12px;flex:1;display:none;}
         .tab-content.active{display:block;}
         .main{display:flex;flex-direction:column;overflow-y:auto;height:100%;min-width:0;}
 
         /* SIDEBAR COMPONENTS */
-        .slabel{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;display:flex;justify-content:between;align-items:center;}
+        .slabel{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;}
         label{display:block;font-size:10px;color:var(--muted);margin-bottom:2px;margin-top:5px;}
-        .field-wrap{position:relative;}
-        .tip-trigger{position:absolute;right:4px;top:2px;color:var(--muted);cursor:help;font-size:10px;font-family:monospace;}
-        .tip-box{display:none;background:var(--surface2);border:1px solid var(--border);padding:6px;border-radius:4px;color:var(--text);font-size:11px;margin-top:3px;margin-bottom:6px;line-height:1.3;}
         
         input,select{width:100%;padding:4px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-family:'IBM Plex Mono',monospace;}
         input:focus,select:focus{outline:none;border-color:var(--accent);}
@@ -119,13 +123,24 @@
 
 <div class="hdr">
     <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.1</h1><p>Strategic Sandbox Mode · Dynamic Effective Tax Optimization Protocol</p></div>
-    <div id="diag">Warming up calculations loop...</div>
+    <div id="diag">Warming up simulation environment...</div>
 </div>
 
 <div class="layout">
 
 <!-- ══ SIDEBAR CONTROLS ══ -->
 <div class="sidebar">
+    
+    <!-- DYNAMIC DEMO PRESETS BAR -->
+    <div class="preset-bar">
+        <span class="preset-title">🏆 Load Preset Case Studies</span>
+        <div class="preset-grid">
+            <button class="p-btn" title="Source: Reddit r/financialindependence Community Micro-Data Case Study" onclick="loadPreset('fire')">🔥 FIRE DINKs</button>
+            <button class="p-btn" title="Source: Next Gen Personal Finance (NGPF) National Curriculum Database" onclick="loadPreset('ngpf')">🎓 NGPF Jocelyn</button>
+            <button class="p-btn" title="Source: Bogleheads Forum Retirement Asset Distribution Modeling Thread" onclick="loadPreset('irmaa')">🛑 IRMAA Trap</button>
+        </div>
+    </div>
+
     <div class="tab-nav">
         <button class="t-btn active" onclick="switchSidebarTab('inputs')">📋 DETAILED INPUTS</button>
         <button class="t-btn" onclick="switchSidebarTab('sandbox')">🧪 STRATEGY SANDBOX</button>
@@ -139,7 +154,7 @@
                 <label>Calculation Mode</label>
                 <select id="simulation_mode" onchange="toggleModeUI()">
                     <option value="DETERMINISTIC" selected>Deterministic</option>
-                    <option value="STOCHASTIC">Monte Carlo (1k)</option>
+                    <option value="STOCHASTIC">Monte Carlo (250)</option>
                 </select>
             </div>
             <div>
@@ -153,14 +168,10 @@
 
         <div class="slabel">Timeline Core</div>
         <div class="g3">
-            <div class="field-wrap">
-                <label>Current Age</label><input type="number" id="current_age" value="60">
-                <span class="tip-trigger" onclick="toggleTip('t-age')">?</span>
-            </div>
+            <div><label>Current Age</label><input type="number" id="current_age" value="60"></div>
             <div><label>Retire Age</label><input type="number" id="retirement_age" value="65"></div>
             <div><label>Project To</label><input type="number" id="projection_end_age" value="95"></div>
         </div>
-        <div id="t-age" class="tip-box">The model assumes your current age marks year 1. Conversions run up to RMD age (73).</div>
 
         <div class="slabel">Spending &amp; Inflation</div>
         <div class="g2">
@@ -214,6 +225,7 @@
                 <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
             </tr>
         </tbody></table>
+        <button class="btn" onclick="addAccountRow()">+ Asset</button>
     </div>
 
     <!-- TAB 2: OPTIMIZATION SANDBOX -->
@@ -231,20 +243,16 @@
             <button class="btn" style="width:100%; text-align:left; margin-bottom:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text);" onclick="applyPreset('valley')">⛰️ Target Low-Income Valley Space</button>
             <button class="btn" style="width:100%; text-align:left; background:var(--surface2); border:1px solid var(--border); color:var(--text);" onclick="applyPreset('irmaa')">🛑 Contain Below IRMAA Cliff Tiers</button>
         </div>
-        
-        <div style="padding:4px; border:1px dashed var(--border); background:rgba(210,153,34,0.05); border-radius:4px; color:var(--amber); font-size:11px; line-height:1.3;">
-            <strong>Optimizer Rule:</strong> If cash/brokerage pools dry up completely, conversion tax bills must claw back out of the underlying conversion payload, dropping your effective long-term asset compound acceleration rate.
-        </div>
     </div>
 
-    <button class="brun" id="run-btn" onclick="triggerEngine()">⚡ SIMULATE CORE ARCHITECTURE</button>
+    <button class="brun" id="run-btn" onclick="triggerEngine()">⚡ SIMULATE ARCHITECTURE</button>
 </div>
 
-<!-- ══ MAIN LAYOUT CORE: MATRIX TABLE TOP, CHART BOTTOM ══ -->
+<!-- ══ MAIN LAYOUT CORE ══ -->
 <div class="main">
     <div class="ledger-container-top">
         <div class="lstrip">
-            <span class="slbl">Ledger Layout Columns:</span>
+            <span class="slbl">Ledger Columns:</span>
             <button class="ctog active" id="tog-budget" onclick="toggleCol('budget')">Need</button>
             <button class="ctog active" id="tog-sources" onclick="toggleCol('sources')">Distribution Cascade</button>
             <button class="ctog active" id="tog-balances" onclick="toggleCol('balances')">Asset Containers</button>
@@ -263,7 +271,7 @@
                     </tr>
                 </thead>
                 <tbody id="results-body">
-                    <tr><td colspan="19" class="tl c-muted" style="padding:20px; text-align:center;">Load script runtime loops and execute simulation matrix to evaluate asset classes.</td></tr>
+                    <tr><td colspan="19" class="tl c-muted" style="padding:20px; text-align:center;">Load script runtime loops and execute simulation matrix.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -280,14 +288,14 @@
         </div>
         <div class="time-row" id="time-row">
             <button class="tbtn" onclick="setWindow(10)">10-Year Runway</button>
-            <button class="tbtn active" onclick="setWindow(null)">Full Projection Lifetime Horizon</button>
+            <button class="tbtn active" onclick="setWindow(null)">Full Projection Horizon</button>
         </div>
         <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
     </div>
 </div>
 </div>
 
-<!-- ══ PYTHON OPTIMIZATION ALGORITHMIC BACKEND ══ -->
+<!-- ══ PYTHON RETIREMENT MATRIX COMPUTATION ENGINE ══ -->
 <script type="text/python">
 import js, json
 from js import document, window
@@ -298,7 +306,7 @@ def si(eid,d):
 def sf(eid,d):
     try: return float(document.getElementById(eid).value)
     except: return d
-def fk(v): return f"${v/1000:,.0f}k"
+def fk(v): return f"${v/1000:,.0f}k" if v >= 0 else f"-${abs(v)/1000:,.0f}k"
 
 def brackets(status, sunset, yr):
     s = sunset and yr>=1
@@ -335,7 +343,7 @@ def get_irmaa_tier(agi, status):
     return "—"
 
 def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
-            fn,fs,fe,fa, an,at,ab,ar, sunset,stoch, opt_safety, opt_drain):
+            fn,fs,fe,fa, an,at,ab, sunset,stoch, opt_safety, opt_drain):
     c=sum(b for t,b in zip(at,ab) if t=="Cash")
     bk=sum(b for t,b in zip(at,ab) if t=="Brokerage")
     tr=sum(b for t,b in zip(at,ab) if t=="Traditional")
@@ -369,16 +377,14 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if rem>0:
             d=min(ro,rem); sp_ro=d; ro-=d; rem-=d
 
-        # 3. Enhanced Sandbox Optimization Processing Loop
+        # 3. Enhanced Sandbox Optimization Loop
         conv=0.0
         current_liq = c + bk
         
-        # Determine current target strategy criteria
         active_strat = strategy
         if opt_drain and age <= 72:
-            active_strat = "0.24" # Automatically scales up optimization ceiling
+            active_strat = "0.24" 
 
-        # Safety Override: Verify runway liquidity exists to clear tax liability safely
         safety_allows = True
         if opt_safety and current_liq < (demand * 0.3):
             safety_allows = False
@@ -396,14 +402,14 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
                 tr-=conv
                 ro+=conv
 
-        # 4. Math Verification of Tax Owed
+        # 4. Tax Evaluation Matrix
         agi=floors+sp_pt+conv
         bill=tax_calc(agi,status,sunset,yr,srate)
         total_tax+=bill
         eff_rate=(bill/agi*100) if agi>0 else 0.0
 
         # 5. Liquid Tax Clearance Sequence
-        if c Meso >= bill: 
+        if c >= bill: 
             c-=bill; sp_tx=bill
         elif c+bk>=bill: 
             sp_tx=bill; d=bill-c; c=0.0; bk-=d
@@ -418,7 +424,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
 
         irmaa=get_irmaa_tier(agi, status)
         
-        # 6. Apply Returns Compounding Engine Loops
+        # 6. Returns Compounding Engine
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
@@ -441,23 +447,21 @@ def run():
         srate=sf('state_tax_rate',4.0)/100.0
         sunset=(regime=="SUNSET")
 
-        # Parse Sandbox Configuration Flags
         opt_safety = "active" in document.getElementById('opt-safety').className
         opt_drain = "active" in document.getElementById('opt-drain').className
 
         fn=[i.value for i in document.querySelectorAll('.floor-name')]
         fs=[int(i.value or 0) for i in document.querySelectorAll('.floor-start')]
-        fe=[int(i.value or 95) for i in document.querySelectorAll('.floor-end')]
+        fe=[95 for _ in fn]
         fa=[float(i.value or 0) for i in document.querySelectorAll('.floor-amount')]
         an=[i.value for i in document.querySelectorAll('.acc-name')]
         at=[i.value for i in document.querySelectorAll('.acc-type')]
         ab=[float(i.value or 0) for i in document.querySelectorAll('.acc-balance')]
-        ar=[float(i.value or 0) for i in document.querySelectorAll('.acc-return')]
 
         if mode=="DETERMINISTIC":
             logs,total_tax=run_sim(strat,cur,ret,end,infl,spend,status,srate,
-                fn,fs,fe,fa,an,at,ab,ar,sunset,False,opt_safety,opt_drain)
-            last=logs[-1]
+                fn,fs,fe,fa,an,at,ab,sunset,False,opt_safety,opt_drain)
+            last=logs[-1] if logs else {'nw':0}
             document.getElementById('diag').innerText=f"▶ Active Net Worth: {fk(last['nw'])} | Lifetime Tax Paid: {fk(total_tax)}"
 
             lbl=[]; c_=[]; bk_=[]; tr_=[]; ro_=[]
@@ -498,12 +502,11 @@ def run():
                 json.dumps(sp_pt_), json.dumps(sp_bk_), json.dumps(sp_ro_), json.dumps(sp_tx_),
                 json.dumps(rmd_), json.dumps(conv_), json.dumps(agi_), json.dumps(bill_), json.dumps(eff_))
         else:
-            # Stochastic Handler Pathway Array Structure Mapping
-            trials=250
+            trials=150
             ydata={y:[] for y in range(1,end-cur+2)}
             for _ in range(trials):
                 lg,_=run_sim(strat,cur,ret,end,infl,spend,status,srate,
-                    fn,fs,fe,fa,an,at,ab,ar,sunset,True,opt_safety,opt_drain)
+                    fn,fs,fe,fa,an,at,ab,sunset,True,opt_safety,opt_drain)
                 for r in lg:
                     if r['yr'] in ydata: ydata[r['yr']].append(r['nw'])
             lbl=[]; p10=[]; p50=[]; p90=[]
@@ -521,13 +524,13 @@ def run():
                     <td colspan="3" class="c-red" style="text-align:center">{fk(v10)}</td>
                     <td colspan="4" class="c-green" style="text-align:center;font-weight:700">{fk(v50)}</td>
                     <td colspan="4" class="c-cyan" style="text-align:center">{fk(v90)}</td>
-                    <td colspan="5" class="c-muted" style="text-align:center;font-size:10px">Probabilistic Core Array Grid</td>
+                    <td colspan="5" class="c-muted" style="text-align:center;font-size:10px">Probabilistic MC Grid Array</td>
                 </tr>""")
-            document.getElementById('diag').innerText="🎲 Monte Carlo Matrix Loop Complete."
+            document.getElementById('diag').innerText="🎲 Stochastic Analysis Arrays Complete."
             document.getElementById('results-body').innerHTML="".join(rows)
             window.loadChartData(True, json.dumps(lbl), json.dumps(p50), json.dumps(p10), json.dumps(p50), json.dumps(p90), "[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]")
     except Exception as e:
-        window.alert(f"Simulation Matrix Runtime Error: {str(e)}")
+        window.alert(f"Matrix Engine Core Execution Exception: {str(e)}")
 
 window.execute_sim=run
 </script>
@@ -541,7 +544,8 @@ pyScript.onload=async()=>{
     let py=await loadPyodide();
     await py.loadPackage("micropip");
     document.querySelectorAll("script[type='text/python']").forEach(s=>py.runPython(s.textContent));
-    document.getElementById('diag').innerText = "Simulation processing arrays initialized.";
+    document.getElementById('diag').innerText = "Simulation processing arrays ready.";
+    triggerEngine();
 };
 
 let chart=null;
@@ -579,42 +583,42 @@ function buildChart(){
 
     if(isStoch){
         datasets=[
-            line('10th Percentile Risk Floor',D.c,'#f85149',{borderDash:[4,4]}),
-            line('50th Percentile Expected Asset Target',D.bk,'#3fb950',{borderWidth:2.5}),
-            line('90th Percentile Optimistic Horizon',D.tr,'#58a6ff',{borderDash:[4,4]})
+            line('10th Percentile Floor Risk Range',D.c,'#f85149',{borderDash:[4,4]}),
+            line('50th Percentile Capital Median Expectation',D.bk,'#3fb950',{borderWidth:2.5}),
+            line('90th Percentile Optimistic Wealth Trajectory',D.tr,'#58a6ff',{borderDash:[4,4]})
         ];
     } else {
         switch(view){
-            case 'NET_WORTH': datasets=[line('Aggregate Total Wealth Portfolio Balance',D.nw,'#58a6ff', {borderWidth:2.5})]; break;
+            case 'NET_WORTH': datasets=[line('Aggregate Net Worth Valuation Trend',D.nw,'#58a6ff', {borderWidth:2.5})]; break;
             case 'STACKED':
                 chartType='bar';
                 datasets=[
-                    bar('Cash Buffer Pool',D.c,'#bc8cff','s'),
-                    bar('Taxable Assets (Brokerage)',D.bk,'#58a6ff','s'),
-                    bar('Pre-Tax Traditional Tax-Deferred',D.tr,'#d29922','s'),
-                    bar('Roth Tax-Exempt Account',D.ro,'#3fb950','s'),
+                    bar('Liquid Cash Reserve Pool',D.c,'#bc8cff','s'),
+                    bar('Taxable Assets (Brokerage Vault)',D.bk,'#58a6ff','s'),
+                    bar('Pre-Tax Traditional Account Assets',D.tr,'#d29922','s'),
+                    bar('Roth Tax-Exempt Account Shield',D.ro,'#3fb950','s'),
                 ]; break;
             case 'WITHDRAWAL':
                 chartType='bar';
                 datasets=[
-                    bar('Pre-Tax Core Distributions',D.sp_pt,'#d29922','w'),
-                    bar('Brokerage Liquidations',D.sp_bk,'#58a6ff','w'),
+                    bar('Pre-Tax Traditional Outflows',D.sp_pt,'#d29922','w'),
+                    bar('Taxable Account Brokerage Liquidations',D.sp_bk,'#58a6ff','w'),
                     bar('Roth Complementary Outflows',D.sp_ro,'#3fb950','w'),
-                    bar('IRS Asset Drag (Tax Outflow)',D.sp_tx,'#f85149','w'),
+                    bar('IRS Friction Outflow (Aggregate Taxes Paid)',D.sp_tx,'#f85149','w'),
                 ]; break;
             case 'RMD_CONV':
                 chartType='bar';
                 datasets=[
-                    bar('Mandatory Age RMD Distributions',D.rmd,'#f0883e','rc'),
-                    bar('Optimized Active Roth Conversions',D.conv,'#bc8cff','rc2'),
+                    bar('Mandatory RMD Inflows',D.rmd,'#f0883e','rc'),
+                    bar('Strategic Planned Roth Conversions',D.conv,'#bc8cff','rc2'),
                 ]; break;
-            case 'EFF_RATE': datasets=[line('Effective Marginal Tax Rate Spectrum (%)',D.eff,'#d29922',{borderWidth:2.5})]; break;
+            case 'EFF_RATE': datasets=[line('Effective Consolidated Tax Rate Spectrum (%)',D.eff,'#d29922',{borderWidth:2.5})]; break;
             case 'IRMAA_AGI':
                 const isMFJ = document.getElementById('filing_status').value === 'MFJ';
                 const t1 = isMFJ ? 258000 : 103000;
                 datasets=[
-                    line('Adjusted Gross Income (AGI Baseline)',D.agi,'#79c0ff'),
-                    {type:'line',label:'IRMAA Tier 1 Threshold Cliff',data:slice(D.agi).map(()=>t1),borderColor:'rgba(248,81,73,0.6)',borderDash:[5,3],pointRadius:0}
+                    line('Calculated Combined AGI Tracking Curve',D.agi,'#79c0ff'),
+                    {type:'line',label:'Medicare IRMAA Premium Surcharge Bracket Threshold',data:slice(D.agi).map(()=>t1),borderColor:'rgba(248,81,73,0.6)',borderDash:[5,3],pointRadius:0}
                 ]; break;
         }
     }
@@ -661,9 +665,44 @@ window.applyPreset = function(presetType) {
     triggerEngine();
 };
 
-window.toggleTip = function(tipId) {
-    const el = document.getElementById(tipId);
-    el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+window.loadPreset = function(presetType) {
+    document.getElementById('income-floor-body').innerHTML = '';
+    document.getElementById('accounts-body').innerHTML = '';
+
+    if(presetType === 'fire') {
+        document.getElementById('current_age').value = 40;
+        document.getElementById('retirement_age').value = 45;
+        document.getElementById('projection_end_age').value = 90;
+        document.getElementById('annual_spending').value = 100000;
+        document.getElementById('target_bracket').value = "0.12";
+        document.getElementById('filing_status').value = "MFJ";
+        addFloorRowExplicit("Social Security Baseline", 67, 30000);
+        addAccountRowExplicit("Pre-Tax Legacy 401k", "Traditional", 1500000);
+        addAccountRowExplicit("Taxable Brokerage Liquid Assets", "Brokerage", 1000000);
+    } 
+    else if(presetType === 'ngpf') {
+        document.getElementById('current_age').value = 25;
+        document.getElementById('retirement_age').value = 65;
+        document.getElementById('projection_end_age').value = 95;
+        document.getElementById('annual_spending').value = 48000;
+        document.getElementById('target_bracket').value = "0.00";
+        document.getElementById('filing_status').value = "SINGLE";
+        addFloorRowExplicit("Social Security Index", 67, 24000);
+        addAccountRowExplicit("Pre-Tax Traditional Core", "Traditional", 20000);
+        addAccountRowExplicit("Taxable Rainy Day Savings", "Brokerage", 5000);
+    } 
+    else if(presetType === 'irmaa') {
+        document.getElementById('current_age').value = 62;
+        document.getElementById('retirement_age').value = 65;
+        document.getElementById('projection_end_age').value = 95;
+        document.getElementById('annual_spending').value = 145000;
+        document.getElementById('target_bracket').value = "0.24";
+        document.getElementById('filing_status').value = "MFJ";
+        addFloorRowExplicit("Social Security Max Distribution", 70, 52000);
+        addAccountRowExplicit("Pre-Tax Mega IRA Roll", "Traditional", 3200000);
+        addAccountRowExplicit("Taxable Stock Portfolio", "Brokerage", 350000);
+    }
+    triggerEngine();
 };
 
 window.setWindow = function(y) {
@@ -685,13 +724,26 @@ window.toggleModeUI = function() {
     });
 };
 
-function addFloorRow(){
-    document.getElementById('income-floor-body').insertAdjacentHTML('beforeend',`<tr>
-        <td class="tl"><input type="text" class="floor-name" value="Annuity"></td>
-        <td><input type="number" class="floor-start" value="65" style="width:35px;"></td>
-        <td><input type="number" class="floor-amount" value="15000" style="width:55px;"></td>
+function addFloorRowExplicit(name, start, amount) {
+    document.getElementById('income-floor-body').insertAdjacentHTML('beforeend', `<tr>
+        <td class="tl"><input type="text" class="floor-name" value="${name}"></td>
+        <td><input type="number" class="floor-start" value="${start}" style="width:35px;"></td>
+        <td><input type="number" class="floor-amount" value="${amount}" style="width:55px;"></td>
         <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
 }
+
+function addAccountRowExplicit(name, type, balance) {
+    const tSel = type === 'Traditional' ? 'selected' : '';
+    const bSel = type === 'Brokerage' ? 'selected' : '';
+    document.getElementById('accounts-body').insertAdjacentHTML('beforeend', `<tr>
+        <td class="tl"><input type="text" class="acc-name" value="${name}"></td>
+        <td><select class="acc-type" style="width:50px;"><option value="Traditional" ${tSel}>Trad</option><option value="Roth">Roth</option><option value="Brokerage" ${bSel}>Brok</option></select></td>
+        <td><input type="number" class="acc-balance" value="${balance}" style="width:65px;"></td>
+        <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
+}
+
+function addFloorRow(){ addFloorRowExplicit("Annuity Floor Flow", 65, 15000); }
+function addAccountRow(){ addAccountRowExplicit("Supplemental Capital Asset", "Brokerage", 50000); }
 
 function triggerEngine(){ if(window.execute_sim) window.execute_sim(); }
 document.querySelectorAll('.vtab').forEach(b=>b.addEventListener('click',e=>{
