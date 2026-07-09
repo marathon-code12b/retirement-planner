@@ -209,12 +209,25 @@
         <table class="mt"><tbody id="income-floor-body">
             <tr>
                 <td class="tl"><input type="text" class="floor-name" value="Social Security"></td>
-                <td><input type="number" class="floor-start" value="67" style="width:35px;"></td>
-                <td><input type="number" class="floor-amount" value="45000" style="width:55px;"></td>
+                <td><input type="number" class="floor-start" value="67" style="width:35px;" title="Start Age"></td>
+                <td><input type="number" class="floor-amount" value="45000" style="width:55px;" title="Annual Amount"></td>
                 <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
             </tr>
         </tbody></table>
         <button class="btn" onclick="addFloorRow()">+ Floor</button>
+
+        <div class="slabel">Expense &amp; Liability Outlays</div>
+        <table class="mt"><tbody id="outlays-body">
+            <tr>
+                <td class="tl"><input type="text" class="outlay-name" value="Primary Mortgage"></td>
+                <td><select class="outlay-type" style="width:55px;"><option value="Mortgage" selected>Mortg</option><option value="Recurring">Recur</option><option value="One-Time">1-Time</option></select></td>
+                <td><input type="number" class="outlay-start" value="60" style="width:30px;" title="Start Age"></td>
+                <td><input type="number" class="outlay-end" value="75" style="width:30px;" title="End Age"></td>
+                <td><input type="number" class="outlay-amount" value="24000" style="width:50px;" title="Annual Amount"></td>
+                <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
+            </tr>
+        </tbody></table>
+        <button class="btn" onclick="addOutlayRow()">+ Outlay</button>
 
         <div class="slabel">Asset Containers</div>
         <table class="mt"><tbody id="accounts-body">
@@ -357,7 +370,7 @@ def get_irmaa_tier(agi, status):
     return "—"
 
 def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
-            fn,fs,fe,fa, an,at,ab, sunset,stoch, opt_safety, opt_drain):
+            fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab, sunset,stoch, opt_safety, opt_drain):
     c=sum(b for t,b in zip(at,ab) if t=="Cash")
     bk=sum(b for t,b in zip(at,ab) if t=="Brokerage")
     tr=sum(b for t,b in zip(at,ab) if t=="Traditional")
@@ -370,7 +383,20 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         age=cur_age+yr-1
         if age>end_age: break
         im=(1+infl)**(yr-1)
+        
+        # Base consumption metric allocation
         demand=spend*im if age>=ret_age else 0.0
+        
+        # Compute dynamic custom outlays matrix
+        for on, ot, os, oe, oa in zip(oxn, oxt, oxs, oxe, oxa):
+            if os <= age <= oe:
+                if ot == "One-Time" and age != os:
+                    continue
+                if ot == "Mortgage":
+                    demand += oa # Mortgages are flat fixed liabilities
+                else:
+                    demand += oa * im # Subscriptions & one-times are indexed to inflation
+                    
         floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
         deficit=max(0.0,demand-floors)
 
@@ -509,13 +535,20 @@ def run():
         fs=[int(i.value or 0) for i in document.querySelectorAll('.floor-start')]
         fe=[95 for _ in fn]
         fa=[float(i.value or 0) for i in document.querySelectorAll('.floor-amount')]
+        
+        oxn=[i.value for i in document.querySelectorAll('.outlay-name')]
+        oxt=[i.value for i in document.querySelectorAll('.outlay-type')]
+        oxs=[int(i.value or 0) for i in document.querySelectorAll('.outlay-start')]
+        oxe=[int(i.value or 95) for i in document.querySelectorAll('.outlay-end')]
+        oxa=[float(i.value or 0) for i in document.querySelectorAll('.outlay-amount')]
+
         an=[i.value for i in document.querySelectorAll('.acc-name')]
         at=[i.value for i in document.querySelectorAll('.acc-type')]
         ab=[float(i.value or 0) for i in document.querySelectorAll('.acc-balance')]
 
         if mode=="DETERMINISTIC":
             logs,total_tax=run_sim(strat,cur,ret,end,infl,spend,status,srate,
-                fn,fs,fe,fa,an,at,ab,sunset,False,opt_safety,opt_drain)
+                fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab,sunset,False,opt_safety,opt_drain)
             last=logs[-1] if logs else {'nw':0}
             
             def f_k(v): return f"${v/1000:,.0f}k" if v >= 0 else f"-${abs(v)/1000:,.0f}k"
@@ -572,7 +605,7 @@ def run():
             ydata={y:[] for y in range(1,end-cur+2)}
             for _ in range(trials):
                 lg,_=run_sim(strat,cur,ret,end,infl,spend,status,srate,
-                    fn,fs,fe,fa,an,at,ab,sunset,True,opt_safety,opt_drain)
+                    fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab,sunset,True,opt_safety,opt_drain)
                 for r in lg:
                     if r['yr'] in ydata: ydata[r['yr']].append(r['nw'])
             lbl=[]; p50=[]
@@ -704,6 +737,12 @@ function buildChart(){
     });
 }
 
+function triggerEngine() {
+    if(window.execute_sim) {
+        window.execute_sim();
+    }
+}
+
 window.switchSidebarTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
     document.querySelectorAll('.t-btn').forEach(el=>el.classList.remove('active'));
@@ -730,6 +769,7 @@ window.applyPreset = function(presetType) {
 
 window.loadPreset = function(presetType) {
     document.getElementById('income-floor-body').innerHTML = '';
+    document.getElementById('outlays-body').innerHTML = '';
     document.getElementById('accounts-body').innerHTML = '';
 
     if(presetType === 'fire') {
@@ -740,6 +780,7 @@ window.loadPreset = function(presetType) {
         document.getElementById('target_bracket').value = "0.12";
         document.getElementById('filing_status').value = "MFJ";
         addFloorRowExplicit("Social Security Baseline", 67, 30000);
+        addOutlayRowExplicit("Mortgage Payoff", "Mortgage", 40, 55, 32000);
         addAccountRowExplicit("Pre-Tax Legacy 401k", "Traditional", 1500000);
         addAccountRowExplicit("Taxable Brokerage Liquid Assets", "Brokerage", 1000000);
     } 
@@ -751,6 +792,7 @@ window.loadPreset = function(presetType) {
         document.getElementById('target_bracket').value = "0.00";
         document.getElementById('filing_status').value = "SINGLE";
         addFloorRowExplicit("Social Security Index", 67, 24000);
+        addOutlayRowExplicit("Recurring Subscriptions", "Recurring", 25, 95, 1200);
         addAccountRowExplicit("Pre-Tax Traditional Core", "Traditional", 20000);
         addAccountRowExplicit("Taxable Rainy Day Savings", "Brokerage", 5000);
     } 
@@ -762,6 +804,7 @@ window.loadPreset = function(presetType) {
         document.getElementById('target_bracket').value = "0.24";
         document.getElementById('filing_status').value = "MFJ";
         addFloorRowExplicit("Social Security Max Distribution", 70, 52000);
+        addOutlayRowExplicit("World Tour Expense", "One-Time", 66, 66, 45000);
         addAccountRowExplicit("Pre-Tax Mega IRA Roll", "Traditional", 3200000);
         addAccountRowExplicit("Taxable Stock Portfolio", "Brokerage", 350000);
     }
@@ -787,6 +830,10 @@ window.toggleModeUI = function() {
     });
 };
 
+function addFloorRow() {
+    addFloorRowExplicit("New Floor", 67, 25000);
+}
+
 function addFloorRowExplicit(name, start, amount) {
     document.getElementById('income-floor-body').insertAdjacentHTML('beforeend', `<tr>
         <td class="tl"><input type="text" class="floor-name" value="${name}"></td>
@@ -795,25 +842,49 @@ function addFloorRowExplicit(name, start, amount) {
         <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
 }
 
+function addOutlayRow() {
+    addOutlayRowExplicit("New Outlay", "Recurring", 60, 70, 5000);
+}
+
+function addOutlayRowExplicit(name, type, start, end, amount) {
+    const mSel = type === 'Mortgage' ? 'selected' : '';
+    const rSel = type === 'Recurring' ? 'selected' : '';
+    const oSel = type === 'One-Time' ? 'selected' : '';
+    
+    document.getElementById('outlays-body').insertAdjacentHTML('beforeend', `<tr>
+        <td class="tl"><input type="text" class="outlay-name" value="${name}"></td>
+        <td><select class="outlay-type" style="width:55px;">
+            <option value="Mortgage" ${mSel}>Mortg</option>
+            <option value="Recurring" ${rSel}>Recur</option>
+            <option value="One-Time" ${oSel}>1-Time</option>
+        </select></td>
+        <td><input type="number" class="outlay-start" value="${start}" style="width:30px;"></td>
+        <td><input type="number" class="outlay-end" value="${end}" style="width:30px;"></td>
+        <td><input type="number" class="outlay-amount" value="${amount}" style="width:50px;"></td>
+        <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
+}
+
+function addAccountRow() {
+    addAccountRowExplicit("New Asset Container", "Brokerage", 100000);
+}
+
 function addAccountRowExplicit(name, type, balance) {
     const tSel = type === 'Traditional' ? 'selected' : '';
+    const rSel = type === 'Roth' ? 'selected' : '';
     const bSel = type === 'Brokerage' ? 'selected' : '';
+    
     document.getElementById('accounts-body').insertAdjacentHTML('beforeend', `<tr>
         <td class="tl"><input type="text" class="acc-name" value="${name}"></td>
-        <td><select class="acc-type" style="width:50px;"><option value="Traditional" ${tSel}>Trad</option><option value="Roth">Roth</option><option value="Brokerage" ${bSel}>Brok</option></select></td>
+        <td><select class="acc-type" style="width:50px;">
+            <option value="Traditional" ${tSel}>Trad</option>
+            <option value="Roth" ${rSel}>Roth</option>
+            <option value="Brokerage" ${bSel}>Brok</option>
+        </select></td>
         <td><input type="number" class="acc-balance" value="${balance}" style="width:65px;"></td>
         <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
 }
 
-function addFloorRow(){ addFloorRowExplicit("Annuity Floor Flow", 65, 15000); }
-function addAccountRow(){ addAccountRowExplicit("Supplemental Capital Asset", "Brokerage", 50000); }
-
-function triggerEngine(){ if(window.execute_sim) window.execute_sim(); }
-document.querySelectorAll('.vtab').forEach(b=>b.addEventListener('click',e=>{
-    document.querySelectorAll('.vtab').forEach(x=>x.classList.remove('active'));
-    e.target.classList.add('active');
-    buildChart();
-}));
+document.addEventListener('change', () => triggerEngine());
 </script>
 </body>
 </html>
