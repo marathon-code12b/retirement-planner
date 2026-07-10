@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v4.7 (Diagnostic Ledger Edition)</title>
+    <title>Retirement Matrix Engine v4.8 (Amortization & Diagnostic Ledger)</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -44,7 +44,7 @@
         .t-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(88,166,255,0.05);font-weight:600;}
 
         /* LAYOUT */
-        .layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 47px);}
+        .layout{display:grid;grid-template-columns:350px 1fr;height:calc(100vh - 47px);}
         .sidebar{border-right:1px solid var(--border);overflow-y:auto;background:var(--surface);display:flex;flex-direction:column;}
         .tab-content{padding:10px 12px;flex:1;display:none;}
         .tab-content.active{display:block;}
@@ -129,7 +129,7 @@
 <body>
 
 <div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.7</h1><p>Diagnostic Trace Ledger Mode enabled</p></div>
+    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.8</h1><p>Diagnostic Amortization & Trace Ledger Mode enabled</p></div>
     <div id="diag">Warming up simulation environment...</div>
 </div>
 
@@ -185,6 +185,16 @@
             <div><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.001" value="0.025"></div>
         </div>
 
+        <div class="slabel">Mortgage Debt Amortization</div>
+        <div>
+            <label>Remaining Principal Balance ($)</label>
+            <input type="number" id="mortgage_principal" value="250000">
+        </div>
+        <div class="g2">
+            <div><label>Interest Rate (%)</label><input type="number" id="mortgage_rate" step="0.01" value="4.5"></div>
+            <div><label>Months Remaining</label><input type="number" id="mortgage_months" value="180"></div>
+        </div>
+
         <div class="slabel">Tax Policy &amp; State</div>
         <div class="g2">
             <div><label>Bracket Ceiling</label>
@@ -216,14 +226,14 @@
         </tbody></table>
         <button class="btn" onclick="addFloorRow()">+ Floor</button>
 
-        <div class="slabel">Expense &amp; Liability Outlays</div>
+        <div class="slabel">Custom One-Time/Recurring Outlays</div>
         <table class="mt"><tbody id="outlays-body">
             <tr>
-                <td class="tl"><input type="text" class="outlay-name" value="Primary Mortgage"></td>
-                <td><select class="outlay-type" style="width:55px;"><option value="Mortgage" selected>Mortg</option><option value="Recurring">Recur</option><option value="One-Time">1-Time</option></select></td>
+                <td class="tl"><input type="text" class="outlay-name" value="Health Surcharge"></td>
+                <td><select class="outlay-type" style="width:55px;"><option value="Recurring" selected>Recur</option><option value="One-Time">1-Time</option></select></td>
                 <td><input type="number" class="outlay-start" value="60" style="width:30px;" title="Start Age"></td>
-                <td><input type="number" class="outlay-end" value="75" style="width:30px;" title="End Age"></td>
-                <td><input type="number" class="outlay-amount" value="24000" style="width:50px;" title="Annual Amount"></td>
+                <td><input type="number" class="outlay-end" value="65" style="width:30px;" title="End Age"></td>
+                <td><input type="number" class="outlay-amount" value="6000" style="width:50px;" title="Annual Amount"></td>
                 <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
             </tr>
         </tbody></table>
@@ -287,7 +297,7 @@
                         <th class="grp-sources c-amber">Floors</th><th class="grp-sources c-amber">PreTax Out</th><th class="grp-sources">Brokerage Out</th><th class="grp-sources c-green">Roth Out</th><th class="grp-sources c-red">Tax Paid</th>
                         <th class="grp-balances">Cash Reserves</th><th class="grp-balances">Brokerage Asset</th><th class="grp-balances c-amber">PreTax Asset</th><th class="grp-balances c-green">Roth Asset</th>
                         <th class="grp-taxes c-orange">Age RMD</th><th class="grp-taxes c-purple">Conv. Executed</th><th class="grp-taxes c-muted">AGI Metric</th><th class="grp-taxes c-red">Tax Owed</th><th class="grp-taxes c-amber">Eff %</th><th class="grp-taxes">IRMAA Tier</th>
-                        <th style="color:var(--green)">Audit Math &amp; Delta</th>
+                        <th style="color:var(--green)">Audit Trace Logs</th>
                     </tr>
                 </thead>
                 <tbody id="results-body">
@@ -370,9 +380,9 @@ def get_irmaa_tier(agi, status):
     return "—"
 
 def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
-            fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab, sunset,stoch, opt_safety, opt_drain):
+            fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab, sunset,stoch, opt_safety, opt_drain,
+            m_principal, m_rate, m_months):
     
-    # Bucket initial states parsed out cleanly
     c=sum(b for t,b in zip(at,ab) if t=="Cash")
     bk=sum(b for t,b in zip(at,ab) if t=="Brokerage")
     tr=sum(b for t,b in zip(at,ab) if t=="Traditional")
@@ -380,29 +390,46 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
     
     rc, rb, rt, rr = 0.02, 0.06, 0.06, 0.07
     logs=[]; total_tax=0.0
+    
+    # Amortization Calculator
+    m_annual_payment = 0.0
+    months_left = m_months
+    if m_principal > 0 and m_months > 0:
+        mr = (m_rate / 100.0) / 12.0
+        if mr > 0:
+            m_monthly = m_principal * (mr * (1 + mr)**m_months) / ((1 + mr)**m_months - 1)
+        else:
+            m_monthly = m_principal / m_months
+        m_annual_payment = m_monthly * 12.0
 
     for yr in range(1, end_age-cur_age+2):
         age=cur_age+yr-1
         if age>end_age: break
         im=(1+infl)**(yr-1)
         
-        # Base consumption metric allocation
-        demand=spend*im if age>=ret_age else 0.0
+        # Calculate dynamic mortgage inclusion based on remaining months
+        current_year_mortgage = 0.0
+        if months_left > 0:
+            if months_left >= 12:
+                current_year_mortgage = m_annual_payment
+                months_left -= 12
+            else:
+                current_year_mortgage = (m_annual_payment / 12.0) * months_left
+                months_left = 0
+                
+        demand = (spend * im if age >= ret_age else 0.0) + current_year_mortgage
         
-        # Compute dynamic custom outlays matrix
+        # Other Outlays
         for on, ot, os, oe, oa in zip(oxn, oxt, oxs, oxe, oxa):
             if os <= age <= oe:
                 if ot == "One-Time" and age != os:
                     continue
-                if ot == "Mortgage":
-                    demand += oa 
-                else:
-                    demand += oa * im 
+                demand += oa * im 
                     
         floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
         deficit=max(0.0,demand-floors)
 
-        # OVERKILL DOUBLE ENTRY LEDGER CHECK: CAPTURE INVARIANT BASE STATE
+        # Baseline snapshot
         init_total_assets = c + bk + tr + ro
 
         # 1. Statutory RMD Target Execution
@@ -428,19 +455,17 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         # 3. Dynamic Roth Conversion Engine
         conv=0.0
         current_liq = c + bk
-        
         active_strat = strategy
         if opt_drain and age <= 72:
             active_strat = "0.24" 
 
-        safety_allows = True
+        safety_allows = true
         if opt_safety and current_liq < (demand * 0.3):
-            safety_allows = False
+            safety_allows = false
 
         if age <= 72 and active_strat != "0.00" and safety_allows and tr > 0:
             bkts,rates,ded = brackets(status,sunset,yr)
             tpct = 0.99 if active_strat=="MAX_FAST" else float(active_strat)
-            
             target_ceiling = 0.0
             for bi, rv in enumerate(rates):
                 if rv <= tpct:
@@ -448,7 +473,6 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
             
             base_agi = floors + sp_pt
             target_agi_limit = target_ceiling + ded
-            
             room = max(0.0, target_agi_limit - base_agi)
             if room > 0: 
                 conv = min(tr, room)
@@ -462,9 +486,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         eff_rate = (bill/agi*100) if agi>0 else 0.0
 
         # 5. Liquidation Hierarchy for Tax Clearance
-        tax_from_pretax = 0.0
-        tax_from_roth = 0.0
-        
+        tax_withdrawn_from_pretax = 0.0
         if c >= bill: 
             c -= bill; sp_tx = bill
         elif (c + bk) >= bill: 
@@ -473,50 +495,43 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
             bk -= bill
         else:
             sp_tx = c + bk
-            remaining_bill = bill - sp_tx
+            rem_bill = bill - sp_tx
             c = 0.0; bk = 0.0
-            
-            if tr >= remaining_bill:
-                tr -= remaining_bill
-                tax_from_pretax = remaining_bill
-                sp_pt += remaining_bill
-                sp_tx += remaining_bill
-                remaining_bill = 0.0
+            if tr >= rem_bill:
+                tr -= rem_bill
+                tax_withdrawn_from_pretax = rem_bill
+                sp_pt += rem_bill
+                sp_tx += rem_bill
+                rem_bill = 0.0
             else:
-                tax_from_pretax = tr
-                sp_pt += tr
-                sp_tx += tr
-                remaining_bill -= tr
-                tr = 0.0
-
-            if remaining_bill > 0 and ro >= remaining_bill:
-                ro -= remaining_bill; tax_from_roth = remaining_bill; sp_tx += remaining_bill; remaining_bill = 0.0
+                tax_withdrawn_from_pretax = tr
+                sp_pt += tr; sp_tx += tr; rem_bill -= tr; tr = 0.0
+            if rem_bill > 0 and ro >= rem_bill:
+                ro -= rem_bill; sp_tx += rem_bill; rem_bill = 0.0
 
         irmaa = get_irmaa_tier(agi, status)
         
-        # Calculate concrete out-of-pocket tracking metric
-        total_outflow = (sp_pt - tax_from_pretax) + sp_bk + (sp_ro - tax_from_roth) + bill
+        # Precise tracker for the double entry validator loop
+        total_outflow = (sp_pt - tax_withdrawn_from_pretax) + sp_bk + sp_ro + bill
 
-        # 6. Compound Yield Engine
+        # 6. Pre-growth structural math confirmation
+        pre_growth_actual = c + bk + tr + ro
+        expected_pre_growth = init_total_assets - total_outflow
+        delta = pre_growth_actual - expected_pre_growth
+
+        # Compound Yield Engine
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
-        
-        # Capture raw balances prior to interest application to verify flows
-        pre_growth_c = c
-        pre_growth_bk = bk
-        pre_growth_tr = tr
-        pre_growth_ro = ro
-        
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
 
-        # 7. OVERKILL AUDIT PASS ENGINE
-        expected_pre_growth = init_total_assets - total_outflow
-        actual_pre_growth = pre_growth_c + pre_growth_bk + pre_growth_tr + pre_growth_ro
-        
-        delta = actual_pre_growth - expected_pre_growth
-        
+        # 7. Itemized Leak Diagnostics
         if not stoch and abs(delta) > 0.05:
-            audit_pass = f'<span class="c-red" style="font-weight:600;">❌ LEAK (${delta:,.2f})</span>'
+            if abs(delta - bill) < 1.0:
+                audit_pass = f'<span class="c-red">❌ [Tax Mismatch] ({delta:,.0f})</span>'
+            elif rem_bill > 0:
+                audit_pass = f'<span class="c-amber">❌ [Bankruptcy Leak] ({delta:,.0f})</span>'
+            else:
+                audit_pass = f'<span class="c-red">❌ [Leak] (${delta:,.2f})</span>'
         else:
             audit_pass = '<span class="c-green" style="font-weight:600;">✅ PASS</span>'
 
@@ -538,6 +553,10 @@ def run():
         srate=sf('state_tax_rate',4.0)/100.0
         sunset=(regime=="SUNSET")
 
+        m_principal = sf('mortgage_principal', 0.0)
+        m_rate = sf('mortgage_rate', 0.0)
+        m_months = si('mortgage_months', 0)
+
         opt_safety = "active" in document.getElementById('opt-safety').className
         opt_drain = "active" in document.getElementById('opt-drain').className
 
@@ -558,7 +577,8 @@ def run():
 
         if mode=="DETERMINISTIC":
             logs,total_tax=run_sim(strat,cur,ret,end,infl,spend,status,srate,
-                fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab,sunset,False,opt_safety,opt_drain)
+                fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab,sunset,False,opt_safety,opt_drain,
+                m_principal, m_rate, m_months)
             last=logs[-1] if logs else {'nw':0}
             
             def f_k(v): return f"${v/1000:,.0f}k" if v >= 0 else f"-${abs(v)/1000:,.0f}k"
@@ -600,7 +620,7 @@ def run():
                     <td class="grp-taxes c-red" style="font-weight:500;">{format_cell(r['bill'])}</td>
                     <td class="grp-taxes c-amber">{r['eff']:.1f}%</td>
                     <td class="grp-taxes"{irmaa_cls}>{r['irmaa']}</td>
-                    <td style="white-space:nowrap; padding: 2px 8px;">{r['audit']}</td>
+                    <td style="white-space:nowrap; padding: 2px 8px; text-align:left;">{r['audit']}</td>
                 </tr>""")
 
             document.getElementById('results-body').innerHTML="".join(rows)
@@ -615,7 +635,8 @@ def run():
             ydata={y:[] for y in range(1,end-cur+2)}
             for _ in range(trials):
                 lg,_=run_sim(strat,cur,ret,end,infl,spend,status,srate,
-                    fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab,sunset,True,opt_safety,opt_drain)
+                    fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab,sunset,True,opt_safety,opt_drain,
+                    m_principal, m_rate, m_months)
                 for r in lg:
                     if r['yr'] in ydata: ydata[r['yr']].append(r['nw'])
             lbl=[]; p50=[]
@@ -691,9 +712,7 @@ function buildChart(){
     });
 
     if(isStoch){
-        datasets=[
-            line('Simulation Base Probability Path Bound',D.nw,'#3fb950',{borderWidth:2.5})
-        ];
+        datasets=[line('Simulation Base Probability Path Bound',D.nw,'#3fb950',{borderWidth:2.5})];
     } else {
         switch(view){
             case 'NET_WORTH': datasets=[line('Aggregate Net Worth Valuation Trend',D.nw,'#58a6ff', {borderWidth:2.5})]; break;
@@ -791,8 +810,10 @@ window.loadPreset = function(presetType) {
         document.getElementById('annual_spending').value = 100000;
         document.getElementById('target_bracket').value = "0.12";
         document.getElementById('filing_status').value = "MFJ";
+        document.getElementById('mortgage_principal').value = 400000;
+        document.getElementById('mortgage_rate').value = 3.75;
+        document.getElementById('mortgage_months').value = 120;
         addFloorRowExplicit("Social Security Baseline", 67, 30000);
-        addOutlayRowExplicit("Mortgage Payoff", "Mortgage", 40, 55, 32000);
         addAccountRowExplicit("Pre-Tax Legacy 401k", "Traditional", 1500000);
         addAccountRowExplicit("Taxable Brokerage Liquid Assets", "Brokerage", 1000000);
     } 
@@ -803,8 +824,9 @@ window.loadPreset = function(presetType) {
         document.getElementById('annual_spending').value = 48000;
         document.getElementById('target_bracket').value = "0.00";
         document.getElementById('filing_status').value = "SINGLE";
+        document.getElementById('mortgage_principal').value = 0;
+        document.getElementById('mortgage_months').value = 0;
         addFloorRowExplicit("Social Security Index", 67, 24000);
-        addOutlayRowExplicit("Recurring Subscriptions", "Recurring", 25, 95, 1200);
         addAccountRowExplicit("Pre-Tax Traditional Core", "Traditional", 20000);
         addAccountRowExplicit("Taxable Rainy Day Savings", "Brokerage", 5000);
     } 
@@ -815,6 +837,9 @@ window.loadPreset = function(presetType) {
         document.getElementById('annual_spending').value = 145000;
         document.getElementById('target_bracket').value = "0.24";
         document.getElementById('filing_status').value = "MFJ";
+        document.getElementById('mortgage_principal').value = 180000;
+        document.getElementById('mortgage_rate').value = 5.25;
+        document.getElementById('mortgage_months').value = 72;
         addFloorRowExplicit("Social Security Max Distribution", 70, 52000);
         addOutlayRowExplicit("World Tour Expense", "One-Time", 66, 66, 45000);
         addAccountRowExplicit("Pre-Tax Mega IRA Roll", "Traditional", 3200000);
@@ -861,14 +886,12 @@ function addOutlayRow() {
 }
 
 function addOutlayRowExplicit(name, type, start, end, amount) {
-    const mSel = type === 'Mortgage' ? 'selected' : '';
     const rSel = type === 'Recurring' ? 'selected' : '';
     const oSel = type === 'One-Time' ? 'selected' : '';
     
     document.getElementById('outlays-body').insertAdjacentHTML('beforeend', `<tr>
         <td class="tl"><input type="text" class="outlay-name" value="${name}"></td>
         <td><select class="outlay-type" style="width:55px;">
-            <option value="Mortgage" ${mSel}>Mortg</option>
             <option value="Recurring" ${rSel}>Recur</option>
             <option value="One-Time" ${oSel}>1-Time</option>
         </select></td>
@@ -899,15 +922,6 @@ function addAccountRowExplicit(name, type, balance) {
 }
 
 document.addEventListener('change', () => triggerEngine());
-
-// Visual setup on tabs click
-document.getElementById('view-tabs').addEventListener('click', (e) => {
-    if(e.target.classList.contains('vtab')) {
-        document.querySelectorAll('.vtab').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        buildChart();
-    }
-});
 </script>
 </body>
 </html>
