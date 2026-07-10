@@ -371,6 +371,8 @@ def get_irmaa_tier(agi, status):
 
 def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
             fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab, sunset,stoch, opt_safety, opt_drain):
+    
+    # Bucket initial states parsed out cleanly
     c=sum(b for t,b in zip(at,ab) if t=="Cash")
     bk=sum(b for t,b in zip(at,ab) if t=="Brokerage")
     tr=sum(b for t,b in zip(at,ab) if t=="Traditional")
@@ -393,13 +395,14 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
                 if ot == "One-Time" and age != os:
                     continue
                 if ot == "Mortgage":
-                    demand += oa # Mortgages are flat fixed liabilities
+                    demand += oa 
                 else:
-                    demand += oa * im # Subscriptions & one-times are indexed to inflation
+                    demand += oa * im 
                     
         floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
         deficit=max(0.0,demand-floors)
 
+        # OVERKILL DOUBLE ENTRY LEDGER CHECK: CAPTURE INVARIANT BASE STATE
         init_total_assets = c + bk + tr + ro
 
         # 1. Statutory RMD Target Execution
@@ -408,8 +411,11 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if f>0 and tr>0: rmd=min(tr,tr/f)
         sp_pt=rmd; sp_bk=0.0; sp_ro=0.0; sp_tx=0.0
         tr=max(0.0,tr-rmd)
+        
         rem=deficit-rmd
-        if rem<0: c+=abs(rem); rem=0.0
+        if rem<0: 
+            c+=abs(rem)
+            rem=0.0
 
         # 2. Sequential Drawdown Cascade
         if rem>0:
@@ -488,25 +494,29 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
 
         irmaa = get_irmaa_tier(agi, status)
         
-        # Comprehensive out-of-pocket tracking adjustment 
+        # Calculate concrete out-of-pocket tracking metric
         total_outflow = (sp_pt - tax_from_pretax) + sp_bk + (sp_ro - tax_from_roth) + bill
 
         # 6. Compound Yield Engine
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
+        
+        # Capture raw balances prior to interest application to verify flows
+        pre_growth_c = c
+        pre_growth_bk = bk
+        pre_growth_tr = tr
+        pre_growth_ro = ro
+        
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
 
-        # 7. Diagnostic Variant Micro Accounting Audit Pass
-        actual_pre_growth = (c/(1+rc)) + (bk/(1+noise(rb,0.10) if stoch else 1+rb)) + (tr/(1+noise(rt,0.10) if stoch else 1+rt)) + (ro/(1+noise(rr,0.11) if stoch else 1+rr))
+        # 7. OVERKILL AUDIT PASS ENGINE
         expected_pre_growth = init_total_assets - total_outflow
+        actual_pre_growth = pre_growth_c + pre_growth_bk + pre_growth_tr + pre_growth_ro
         
         delta = actual_pre_growth - expected_pre_growth
         
-        if not stoch and abs(delta) > 5.0:
-            if init_total_assets > 1.0:
-                audit_pass = f'<span class="c-red" style="font-weight:600;">❌ ERR (${delta:,.0f})</span>'
-            else:
-                audit_pass = "✅ PASS"
+        if not stoch and abs(delta) > 0.05:
+            audit_pass = f'<span class="c-red" style="font-weight:600;">❌ LEAK (${delta:,.2f})</span>'
         else:
             audit_pass = '<span class="c-green" style="font-weight:600;">✅ PASS</span>'
 
@@ -747,7 +757,9 @@ window.switchSidebarTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
     document.querySelectorAll('.t-btn').forEach(el=>el.classList.remove('active'));
     document.getElementById('tab-'+tabId).classList.add('active');
-    event.target.classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
 };
 
 window.toggleSandboxOpt = function(optId) {
@@ -814,7 +826,9 @@ window.loadPreset = function(presetType) {
 window.setWindow = function(y) {
     winYrs=y;
     document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
-    event.target.classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
     buildChart();
 };
 
@@ -885,6 +899,15 @@ function addAccountRowExplicit(name, type, balance) {
 }
 
 document.addEventListener('change', () => triggerEngine());
+
+// Visual setup on tabs click
+document.getElementById('view-tabs').addEventListener('click', (e) => {
+    if(e.target.classList.contains('vtab')) {
+        document.querySelectorAll('.vtab').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        buildChart();
+    }
+});
 </script>
 </body>
 </html>
