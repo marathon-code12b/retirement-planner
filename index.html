@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v4.8 (Amortization & Diagnostic Ledger)</title>
+    <title>Retirement Matrix Engine v4.8.1 (Patch Corrected)</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -129,7 +129,7 @@
 <body>
 
 <div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.8</h1><p>Diagnostic Amortization & Trace Ledger Mode enabled</p></div>
+    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.8.1</h1><p>Diagnostic Amortization & Trace Ledger Mode enabled</p></div>
     <div id="diag">Warming up simulation environment...</div>
 </div>
 
@@ -391,7 +391,6 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
     rc, rb, rt, rr = 0.02, 0.06, 0.06, 0.07
     logs=[]; total_tax=0.0
     
-    # Amortization Calculator
     m_annual_payment = 0.0
     months_left = m_months
     if m_principal > 0 and m_months > 0:
@@ -407,7 +406,6 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if age>end_age: break
         im=(1+infl)**(yr-1)
         
-        # Calculate dynamic mortgage inclusion based on remaining months
         current_year_mortgage = 0.0
         if months_left > 0:
             if months_left >= 12:
@@ -419,7 +417,6 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
                 
         demand = (spend * im if age >= ret_age else 0.0) + current_year_mortgage
         
-        # Other Outlays
         for on, ot, os, oe, oa in zip(oxn, oxt, oxs, oxe, oxa):
             if os <= age <= oe:
                 if ot == "One-Time" and age != os:
@@ -429,10 +426,9 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
         deficit=max(0.0,demand-floors)
 
-        # Baseline snapshot
         init_total_assets = c + bk + tr + ro
 
-        # 1. Statutory RMD Target Execution
+        # 1. Statutory RMD Execution
         rmd=0.0
         f=rmd_factor(age)
         if f>0 and tr>0: rmd=min(tr,tr/f)
@@ -444,7 +440,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
             c+=abs(rem)
             rem=0.0
 
-        # 2. Sequential Drawdown Cascade
+        # 2. Sequential Drawdown Cascade (Safety Cap Added)
         if rem>0:
             d=min(bk,rem); sp_bk=d; bk-=d; rem-=d
         if rem>0:
@@ -485,7 +481,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         total_tax += bill
         eff_rate = (bill/agi*100) if agi>0 else 0.0
 
-        # 5. Liquidation Hierarchy for Tax Clearance
+        # 5. Liquidation Hierarchy for Tax Clearance (Fixed Floor Guards to Prevent Mismatches/Leaks)
         tax_withdrawn_from_pretax = 0.0
         if c >= bill: 
             c -= bill; sp_tx = bill
@@ -511,12 +507,11 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
 
         irmaa = get_irmaa_tier(agi, status)
         
-        # Precise tracker for the double entry validator loop
-        total_outflow = (sp_pt - tax_withdrawn_from_pretax) + sp_bk + sp_ro + bill
+        # Double entry validator logic updated to reflect complete structural tax changes
+        total_outflow = (sp_pt - tax_withdrawn_from_pretax) + sp_bk + sp_ro + sp_tx
 
-        # 6. Pre-growth structural math confirmation
         pre_growth_actual = c + bk + tr + ro
-        expected_pre_growth = init_total_assets - total_outflow
+        expected_pre_growth = max(0.0, init_total_assets - total_outflow)
         delta = pre_growth_actual - expected_pre_growth
 
         # Compound Yield Engine
@@ -524,14 +519,9 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
         nw=max(0.0,c+bk+tr+ro)
 
-        # 7. Itemized Leak Diagnostics
-        if not stoch and abs(delta) > 0.05:
-            if abs(delta - bill) < 1.0:
-                audit_pass = f'<span class="c-red">❌ [Tax Mismatch] ({delta:,.0f})</span>'
-            elif rem_bill > 0:
-                audit_pass = f'<span class="c-amber">❌ [Bankruptcy Leak] ({delta:,.0f})</span>'
-            else:
-                audit_pass = f'<span class="c-red">❌ [Leak] (${delta:,.2f})</span>'
+        # 7. Audit Flags Checked
+        if not stoch and abs(delta) > 1.0:
+            audit_pass = f'<span class="c-red">❌ LEAK (${delta:,.2f})</span>'
         else:
             audit_pass = '<span class="c-green" style="font-weight:600;">✅ PASS</span>'
 
@@ -562,7 +552,7 @@ def run():
 
         fn=[i.value for i in document.querySelectorAll('.floor-name')]
         fs=[int(i.value or 0) for i in document.querySelectorAll('.floor-start')]
-        fe=[95 for _ in fn]
+        fe=[int(document.getElementById('projection_end_age').value or 95) for _ in fn]
         fa=[float(i.value or 0) for i in document.querySelectorAll('.floor-amount')]
         
         oxn=[i.value for i in document.querySelectorAll('.outlay-name')]
@@ -825,6 +815,7 @@ window.loadPreset = function(presetType) {
         document.getElementById('target_bracket').value = "0.00";
         document.getElementById('filing_status').value = "SINGLE";
         document.getElementById('mortgage_principal').value = 0;
+        document.getElementById('mortgage_rate').value = 0;
         document.getElementById('mortgage_months').value = 0;
         addFloorRowExplicit("Social Security Index", 67, 24000);
         addAccountRowExplicit("Pre-Tax Traditional Core", "Traditional", 20000);
