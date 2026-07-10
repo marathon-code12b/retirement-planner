@@ -2,917 +2,546 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v4.8.1 (Patch Corrected)</title>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>IRMAA & Retirement Simulation Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PyScript/Brython Alternative Core for Python browser injection -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython_modules.js"></script>
     <style>
-        :root {
-            --bg: #0d1117; 
-            --surface: #161b22; 
-            --surface2: #1e2730; 
-            --border: #30363d;
-            --text: #e6edf3; 
-            --muted: #6e7681; 
-            --accent: #58a6ff; 
-            --green: #3fb950;
-            --amber: #d29922; 
-            --red: #f85149; 
-            --purple: #bc8cff; 
-            --cyan: #79c0ff;
-            --orange: #f0883e;
-        }
-        *{box-sizing:border-box;margin:0;padding:0;}
-        body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh;overflow:hidden;}
-
-        /* HEADER */
-        .hdr{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;flex-shrink:0;}
-        .hdr h1{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--accent);}
-        .hdr p{font-size:11px;color:var(--muted);}
-        #diag{margin-left:auto;background:#0d2b1a;border:1px solid #1a4a2e;color:var(--green);font-size:11px;padding:4px 10px;border-radius:20px;font-family:'IBM Plex Mono',monospace;max-width:45vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-
-        /* PRESET SECTION PANEL */
-        .preset-bar{background:rgba(88,166,255,0.05);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;}
-        .preset-title{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;}
-        .preset-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
-        .p-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px;font-size:11px;border-radius:4px;cursor:pointer;font-family:'IBM Plex Mono',monospace;text-align:center;transition:all 0.15s;}
-        .p-btn:hover{border-color:var(--accent);background:var(--surface);}
-
-        /* TAB SYSTEM FOR SIDEBAR */
-        .tab-nav{display:flex;background:var(--surface2);border-bottom:1px solid var(--border);}
-        .t-btn{flex:1;padding:8px;background:transparent;border:none;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;text-align:center;border-bottom:2px solid transparent;}
-        .t-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(88,166,255,0.05);font-weight:600;}
-
-        /* LAYOUT */
-        .layout{display:grid;grid-template-columns:350px 1fr;height:calc(100vh - 47px);}
-        .sidebar{border-right:1px solid var(--border);overflow-y:auto;background:var(--surface);display:flex;flex-direction:column;}
-        .tab-content{padding:10px 12px;flex:1;display:none;}
-        .tab-content.active{display:block;}
-        .main{display:flex;flex-direction:column;overflow-y:auto;height:100%;min-width:0;}
-
-        /* SIDEBAR COMPONENTS */
-        .slabel{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;}
-        label{display:block;font-size:10px;color:var(--muted);margin-bottom:2px;margin-top:5px;}
-        
-        input,select{width:100%;padding:4px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-family:'IBM Plex Mono',monospace;}
-        input:focus,select:focus{outline:none;border-color:var(--accent);}
-        .g2{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
-        .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
-        
-        /* SANDBOX BUTTON PACKS */
-        .sandbox-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:10px;}
-        .sandbox-card h4{font-size:11px;color:var(--accent);margin-bottom:4px;font-family:'IBM Plex Mono',monospace;}
-        .sandbox-card p{font-size:11px;color:var(--muted);margin-bottom:6px;line-height:1.2;}
-        .s-opt-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px 8px;font-size:11px;border-radius:4px;cursor:pointer;width:100%;text-align:left;margin-bottom:4px;font-family:'IBM Plex Mono',monospace;transition:all 0.15s;}
-        .s-opt-btn:hover{border-color:var(--accent);background:rgba(88,166,255,0.05);}
-        .s-opt-btn.active{border-color:var(--green);color:var(--green);background:rgba(63,185,80,0.05);}
-
-        .mt{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px;}
-        .mt th{background:var(--surface2);color:var(--muted);padding:3px 4px;border:1px solid var(--border);font-size:10px;font-weight:600;text-align:center;}
-        .mt td{border:1px solid var(--border);padding:2px 3px;}
-        .mt input,.mt select{padding:2px 3px;font-size:10px;}
-        .tl{text-align:left;}
-        .btn{background:var(--accent);color:#0d1117;border:none;padding:4px 9px;border-radius:3px;cursor:pointer;font-weight:700;font-size:11px;margin-top:5px;}
-        .btn:hover{opacity:.85;}
-        .bdel{background:var(--red);color:#fff;padding:1px 5px;font-size:10px;margin:0;border:none;border-radius:2px;cursor:pointer;}
-        
-        .brun{background:var(--green);color:#0d1117;width:calc(100% - 24px);padding:10px;font-size:13px;letter-spacing:.05em;margin:10px 12px;border-radius:5px;border:none;cursor:pointer;font-weight:700;box-shadow:0 0 10px rgba(63,185,80,0.15);flex-shrink:0;}
-        .brun:hover{opacity:.9;}
-
-        /* WORKSPACE PANELS */
-        .ledger-container-top {background:var(--bg);border-bottom:1px solid var(--border);display:flex;flex-direction:column;max-height:50%;flex-shrink:0;}
-        .lstrip{background:var(--surface);border-bottom:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;}
-        .slbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-right:2px;}
-        .ctog{padding:2px 8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);border-radius:3px;cursor:pointer;font-size:10px;transition:all .15s;white-space:nowrap;}
-        .ctog.active{border-color:var(--accent);color:var(--accent);}
-        
-        .ledger{overflow:auto;flex:1;}
-        .ledger table{width:100%;border-collapse:collapse;font-size:11px;font-family:'IBM Plex Mono',monospace;}
-        .ledger th{background:var(--surface);color:var(--muted);padding:6px 7px;border:1px solid var(--border);text-align:right;font-size:10px;font-weight:600;white-space:nowrap;position:sticky;top:0;z-index:2;}
-        .ledger td{padding:4px 7px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;font-weight:400;}
-        .ledger tr:hover td{background:var(--surface2);}
-        .ledger .tl{text-align:left;}
-
-        /* CELL HIGHLIGHTING SYSTEM */
-        .val-zero { color: #30363d !important; font-weight: 400 !important; }
-        .val-outflow { color: #f87171; font-weight: 500; }
-        .val-inflow { color: #4ade80; font-weight: 500; }
-        .val-conversion { color: #c084fc; font-weight: 600; }
-        .val-deficit { color: #fbbf24; font-weight: 500; }
-
-        /* BOTTOM WORKSPACE: CHART AREA */
-        .chart-area{flex:1;display:flex;flex-direction:column;padding:10px 14px 6px;overflow:hidden;background:var(--surface2);min-height:300px;}
-        .view-tabs{display:flex;gap:3px;flex-wrap:wrap;}
-        .vtab{padding:3px 9px;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:3px;cursor:pointer;font-size:11px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
-        .vtab.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700;}
-        .vtab.grp-asset.active{background:var(--green);border-color:var(--green);}
-        .vtab.grp-tax.active{background:var(--amber);border-color:var(--amber);color:#0d1117;}
-        .vtab.grp-flow.active{background:var(--cyan);border-color:var(--cyan);color:#0d1117;}
-        .time-row{display:flex;gap:3px;margin-top:5px;}
-        .tbtn{padding:2px 9px;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:3px;cursor:pointer;font-size:10px;font-family:'IBM Plex Mono',monospace;}
-        .tbtn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700;}
-        .chart-wrap{flex:1;position:relative;min-height:0;}
-
-        .c-muted{color:var(--muted);}
-        .c-cyan{color:var(--cyan);}
-        .c-amber{color:var(--amber);}
-        .c-green{color:var(--green);}
-        .c-red{color:var(--red);}
-        .c-purple{color:var(--purple);}
-        .c-orange{color:var(--orange);}
-        
-        .hide-budget .grp-budget, .hide-sources .grp-sources, .hide-balances .grp-balances, .hide-taxes .grp-taxes { display:none !important; }
-        ::-webkit-scrollbar{width:4px;height:4px;}
-        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f3f4f6; }
+        .tab-btn.active { background-color: #2563eb !important; color: white !important; }
+        .c-red { color: #dc2626; font-weight: bold; }
+        .c-green { color: #16a34a; font-weight: bold; }
     </style>
 </head>
-<body>
+<body onload="brython(1)">
 
-<div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.8.1</h1><p>Diagnostic Amortization & Trace Ledger Mode enabled</p></div>
-    <div id="diag">Warming up simulation environment...</div>
-</div>
+    <div class="max-w-7xl mx-auto p-6">
+        <header class="mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h1 class="text-3xl font-bold text-gray-900">Retirement Strategy Sandbox</h1>
+            <p class="text-gray-500 mt-1">Multi-Asset Drawdown Optimization Engine with 2026 IRMAA Ledger Auditing</p>
+        </header>
 
-<div class="layout">
-
-<!-- ══ SIDEBAR CONTROLS ══ -->
-<div class="sidebar">
-    
-    <div class="preset-bar">
-        <span class="preset-title">🏆 Load Preset Case Studies</span>
-        <div class="preset-grid">
-            <button class="p-btn" title="FIRE DINKs Case Study" onclick="loadPreset('fire')">🔥 FIRE DINKs</button>
-            <button class="p-btn" title="NGPF Curriculum Database Case Study" onclick="loadPreset('ngpf')">🎓 NGPF Jocelyn</button>
-            <button class="p-btn" title="Bogleheads IRMAA Modeling Case Study" onclick="loadPreset('irmaa')">🛑 IRMAA Trap</button>
-        </div>
-    </div>
-
-    <div class="tab-nav">
-        <button class="t-btn active" onclick="switchSidebarTab('inputs')">📋 DETAILED INPUTS</button>
-        <button class="t-btn" onclick="switchSidebarTab('sandbox')">🧪 STRATEGY SANDBOX</button>
-    </div>
-
-    <!-- TAB 1: DATA INPUTS -->
-    <div id="tab-inputs" class="tab-content active">
-        <div class="slabel">Simulation Core</div>
-        <div class="g2">
-            <div>
-                <label>Calculation Mode</label>
-                <select id="simulation_mode" onchange="toggleModeUI()">
-                    <option value="DETERMINISTIC" selected>Deterministic</option>
-                    <option value="STOCHASTIC">Monte Carlo (150)</option>
-                </select>
-            </div>
-            <div>
-                <label>Filing Status</label>
-                <select id="filing_status">
-                    <option value="SINGLE">Single</option>
-                    <option value="MFJ" selected>Married (MFJ)</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="slabel">Timeline Core</div>
-        <div class="g3">
-            <div><label>Current Age</label><input type="number" id="current_age" value="60"></div>
-            <div><label>Retire Age</label><input type="number" id="retirement_age" value="65"></div>
-            <div><label>Project To</label><input type="number" id="projection_end_age" value="95"></div>
-        </div>
-
-        <div class="slabel">Spending &amp; Inflation</div>
-        <div class="g2">
-            <div><label>Base Budget ($)</label><input type="number" id="annual_spending" value="85000"></div>
-            <div><label>Inflation Rate</label><input type="number" id="inflation_rate" step="0.001" value="0.025"></div>
-        </div>
-
-        <div class="slabel">Mortgage Debt Amortization</div>
-        <div>
-            <label>Remaining Principal Balance ($)</label>
-            <input type="number" id="mortgage_principal" value="250000">
-        </div>
-        <div class="g2">
-            <div><label>Interest Rate (%)</label><input type="number" id="mortgage_rate" step="0.01" value="4.5"></div>
-            <div><label>Months Remaining</label><input type="number" id="mortgage_months" value="180"></div>
-        </div>
-
-        <div class="slabel">Tax Policy &amp; State</div>
-        <div class="g2">
-            <div><label>Bracket Ceiling</label>
-                <select id="target_bracket">
-                    <option value="0.00">No Conversions</option>
-                    <option value="0.12" selected>Top 12% / 15% Bracket</option>
-                    <option value="0.22">Top 22% / 25% Bracket</option>
-                    <option value="0.24">Top 24% / 28% Bracket</option>
-                    <option value="MAX_FAST">Max Accelerated Space</option>
-                </select>
-            </div>
-            <div><label>Tax Sunset</label>
-                <select id="tax_regime_mode">
-                    <option value="CURRENT">Freeze TCJA</option>
-                    <option value="SUNSET" selected>2026 Sunset Rules</option>
-                </select>
-            </div>
-        </div>
-        <div><label>State Tax (%)</label><input type="number" id="state_tax_rate" step="0.1" value="4.0" style="width:48%"></div>
-
-        <div class="slabel">Income Floors</div>
-        <table class="mt"><tbody id="income-floor-body">
-            <tr>
-                <td class="tl"><input type="text" class="floor-name" value="Social Security"></td>
-                <td><input type="number" class="floor-start" value="67" style="width:35px;" title="Start Age"></td>
-                <td><input type="number" class="floor-amount" value="45000" style="width:55px;" title="Annual Amount"></td>
-                <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
-            </tr>
-        </tbody></table>
-        <button class="btn" onclick="addFloorRow()">+ Floor</button>
-
-        <div class="slabel">Custom One-Time/Recurring Outlays</div>
-        <table class="mt"><tbody id="outlays-body">
-            <tr>
-                <td class="tl"><input type="text" class="outlay-name" value="Health Surcharge"></td>
-                <td><select class="outlay-type" style="width:55px;"><option value="Recurring" selected>Recur</option><option value="One-Time">1-Time</option></select></td>
-                <td><input type="number" class="outlay-start" value="60" style="width:30px;" title="Start Age"></td>
-                <td><input type="number" class="outlay-end" value="65" style="width:30px;" title="End Age"></td>
-                <td><input type="number" class="outlay-amount" value="6000" style="width:50px;" title="Annual Amount"></td>
-                <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
-            </tr>
-        </tbody></table>
-        <button class="btn" onclick="addOutlayRow()">+ Outlay</button>
-
-        <div class="slabel">Asset Containers</div>
-        <table class="mt"><tbody id="accounts-body">
-            <tr>
-                <td class="tl"><input type="text" class="acc-name" value="Pre-Tax IRA"></td>
-                <td><select class="acc-type" style="width:50px;"><option value="Traditional" selected>Trad</option><option value="Roth">Roth</option><option value="Brokerage">Brok</option></select></td>
-                <td><input type="number" class="acc-balance" value="1450000" style="width:65px;"></td>
-                <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
-            </tr>
-            <tr>
-                <td class="tl"><input type="text" class="acc-name" value="Taxable Brokerage"></td>
-                <td><select class="acc-type" style="width:50px;"><option value="Traditional">Trad</option><option value="Roth">Roth</option><option value="Brokerage" selected>Brok</option></select></td>
-                <td><input type="number" class="acc-balance" value="300000" style="width:65px;"></td>
-                <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td>
-            </tr>
-        </tbody></table>
-        <button class="btn" onclick="addAccountRow()">+ Asset</button>
-    </div>
-
-    <!-- TAB 2: OPTIMIZATION SANDBOX -->
-    <div id="tab-sandbox" class="tab-content">
-        <div class="sandbox-card">
-            <h4>🎯 Cash Tax Optimizer</h4>
-            <p>Balances pre-tax burn rate against cash/brokerage liquid asset protection limits.</p>
-            <button class="s-opt-btn" id="opt-safety" onclick="toggleSandboxOpt('safety')">🛡️ Lock 2-Yr Cash Safety Runway</button>
-            <button class="s-opt-btn active" id="opt-drain" onclick="toggleSandboxOpt('drain')">⚡ Objective: Total Pre-Tax Pre-RMD Drain</button>
-        </div>
-
-        <div class="sandbox-card">
-            <h4>📊 Strategic Macros Presets</h4>
-            <p>Instantly deploy combinations of bracket spaces and liquidation sequences.</p>
-            <button class="btn" style="width:100%; text-align:left; margin-bottom:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text);" onclick="applyPreset('valley')">⛰️ Target Low-Income Valley Space</button>
-            <button class="btn" style="width:100%; text-align:left; background:var(--surface2); border:1px solid var(--border); color:var(--text);" onclick="applyPreset('irmaa')">🛑 Contain Below IRMAA Cliff Tiers</button>
-        </div>
-    </div>
-
-    <button class="brun" id="run-btn" onclick="triggerEngine()">⚡ SIMULATE ARCHITECTURE</button>
-</div>
-
-<!-- ══ MAIN LAYOUT CORE ══ -->
-<div class="main">
-    <div class="ledger-container-top">
-        <div class="lstrip">
-            <span class="slbl">Ledger Columns:</span>
-            <button class="ctog active" id="tog-budget" onclick="toggleCol('budget')">Need</button>
-            <button class="ctog active" id="tog-sources" onclick="toggleCol('sources')">Distribution Cascade</button>
-            <button class="ctog active" id="tog-balances" onclick="toggleCol('balances')">Asset Containers</button>
-            <button class="ctog active" id="tog-taxes" onclick="toggleCol('taxes')">Tax Ledger Matrix</button>
-        </div>
-
-        <div class="ledger" id="ledger">
-            <table id="ledger-table">
-                <thead>
-                    <tr>
-                        <th class="tl">Yr</th><th>Age</th>
-                        <th class="grp-budget c-cyan">Gross Need</th><th class="grp-budget c-cyan">Deficit</th>
-                        <th class="grp-sources c-amber">Floors</th><th class="grp-sources c-amber">PreTax Out</th><th class="grp-sources">Brokerage Out</th><th class="grp-sources c-green">Roth Out</th><th class="grp-sources c-red">Tax Paid</th>
-                        <th class="grp-balances">Cash Reserves</th><th class="grp-balances">Brokerage Asset</th><th class="grp-balances c-amber">PreTax Asset</th><th class="grp-balances c-green">Roth Asset</th>
-                        <th class="grp-taxes c-orange">Age RMD</th><th class="grp-taxes c-purple">Conv. Executed</th><th class="grp-taxes c-muted">AGI Metric</th><th class="grp-taxes c-red">Tax Owed</th><th class="grp-taxes c-amber">Eff %</th><th class="grp-taxes">IRMAA Tier</th>
-                        <th style="color:var(--green)">Audit Trace Logs</th>
-                    </tr>
-                </thead>
-                <tbody id="results-body">
-                    <tr><td colspan="20" class="tl c-muted" style="padding:20px; text-align:center;">Load script runtime loops and execute simulation matrix.</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="chart-area">
-        <div class="view-tabs" id="view-tabs">
-            <button class="vtab grp-asset active" data-view="NET_WORTH">Aggregate Net Worth</button>
-            <button class="vtab grp-asset" data-view="STACKED">Stratified Growth Stack</button>
-            <button class="vtab grp-flow" data-view="WITHDRAWAL">Drawdown Flow Cascade</button>
-            <button class="vtab grp-flow" data-view="RMD_CONV">RMD vs Roth Conversion</button>
-            <button class="vtab grp-tax" data-view="EFF_RATE">Effective Tax Vector Trend</button>
-            <button class="vtab grp-tax" data-view="IRMAA_AGI">IRMAA Cliff Tracker</button>
-        </div>
-        <div class="time-row" id="time-row">
-            <button class="tbtn" onclick="setWindow(10)">10-Year Runway</button>
-            <button class="tbtn active" onclick="setWindow(null)">Full Projection Horizon</button>
-        </div>
-        <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
-    </div>
-</div>
-</div>
-
-<!-- ══ SCENARIO AUDITING COMPUTATION ENGINE ══ -->
-<script type="text/python">
-import js, json
-from js import document, window
-
-def si(eid,d):
-    try: return int(document.getElementById(eid).value)
-    except: return d
-def sf(eid,d):
-    try: return float(document.getElementById(eid).value)
-    except: return d
-
-def format_cell(v, style_class=""):
-    if v == 0.0 or abs(v) < 0.01:
-        return '<span class="val-zero">—</span>'
-    formatted_num = f"${v/1000:,.1f}k" if v >= 0 else f"-${abs(v)/1000:,.1f}k"
-    if style_class:
-        return f'<span class="{style_class}">{formatted_num}</span>'
-    return formatted_num
-
-def brackets(status, sunset, yr):
-    s = sunset and yr+2025>=2026
-    if status=="MFJ":
-        return ([15100,61300,123700,188450,336550,400000,600000],[.10,.15,.25,.28,.33,.35,.36,.37],29200) if s else \
-               ([23200,94300,201050,383900,487450,731200,900000],[.10,.12,.22,.24,.32,.35,.35,.37],29200)
-    else:
-        return ([7550,30650,74200,154800,336550,400000,500000],[.10,.15,.25,.28,.33,.35,.36,.396],14600) if s else \
-               ([11600,47150,100525,191950,243725,609350,700000],[.10,.12,.22,.24,.32,.35,.35,.37],14600)
-
-def tax_calc(agi, status, sunset, yr, srate):
-    bkts,rates,ded = brackets(status,sunset,yr)
-    taxable = max(0.0, agi-ded)
-    fed=0.0; prev=0.0
-    for i,b in enumerate(bkts):
-        if taxable>b: fed+=(b-prev)*rates[i]; prev=b
-        else: fed+=(taxable-prev)*rates[i]; prev=taxable; break
-    if taxable>prev: fed+=(taxable-prev)*rates[-1]
-    return fed + taxable*srate
-
-def rmd_factor(age):
-    if age<73: return 0.0
-    tbl={73:26.5,74:25.5,75:24.6,76:23.7,77:22.9,78:22.0,79:21.1,80:20.2,81:19.3,82:18.4,
-         83:17.7,84:16.8,85:16.0,86:15.2,87:14.4,88:13.7,89:12.9,90:12.2,91:11.5,92:10.8}
-    return tbl.get(age,8.0)
-
-def get_irmaa_tier(agi, status):
-    if status == "MFJ":
-        if agi > 322000: return "⚠️ Tier 2"
-        if agi > 258000: return "⚠️ Tier 1"
-    else:
-        if agi > 206000: return "⚠️ Tier 2"
-        if agi > 103000: return "⚠️ Tier 1"
-    return "—"
-
-def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
-            fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab, sunset,stoch, opt_safety, opt_drain,
-            m_principal, m_rate, m_months):
-    
-    c=sum(b for t,b in zip(at,ab) if t=="Cash")
-    bk=sum(b for t,b in zip(at,ab) if t=="Brokerage")
-    tr=sum(b for t,b in zip(at,ab) if t=="Traditional")
-    ro=sum(b for t,b in zip(at,ab) if t=="Roth")
-    
-    rc, rb, rt, rr = 0.02, 0.06, 0.06, 0.07
-    logs=[]; total_tax=0.0
-    
-    m_annual_payment = 0.0
-    months_left = m_months
-    if m_principal > 0 and m_months > 0:
-        mr = (m_rate / 100.0) / 12.0
-        if mr > 0:
-            m_monthly = m_principal * (mr * (1 + mr)**m_months) / ((1 + mr)**m_months - 1)
-        else:
-            m_monthly = m_principal / m_months
-        m_annual_payment = m_monthly * 12.0
-
-    for yr in range(1, end_age-cur_age+2):
-        age=cur_age+yr-1
-        if age>end_age: break
-        im=(1+infl)**(yr-1)
-        
-        current_year_mortgage = 0.0
-        if months_left > 0:
-            if months_left >= 12:
-                current_year_mortgage = m_annual_payment
-                months_left -= 12
-            else:
-                current_year_mortgage = (m_annual_payment / 12.0) * months_left
-                months_left = 0
-                
-        demand = (spend * im if age >= ret_age else 0.0) + current_year_mortgage
-        
-        for on, ot, os, oe, oa in zip(oxn, oxt, oxs, oxe, oxa):
-            if os <= age <= oe:
-                if ot == "One-Time" and age != os:
-                    continue
-                demand += oa * im 
-                    
-        floors=sum(m*im for n,s,e,m in zip(fn,fs,fe,fa) if s<=age<=e)
-        deficit=max(0.0,demand-floors)
-
-        init_total_assets = c + bk + tr + ro
-
-        # 1. Statutory RMD Execution
-        rmd=0.0
-        f=rmd_factor(age)
-        if f>0 and tr>0: rmd=min(tr,tr/f)
-        sp_pt=rmd; sp_bk=0.0; sp_ro=0.0; sp_tx=0.0
-        tr=max(0.0,tr-rmd)
-        
-        rem=deficit-rmd
-        if rem<0: 
-            c+=abs(rem)
-            rem=0.0
-
-        # 2. Sequential Drawdown Cascade (Safety Cap Added)
-        if rem>0:
-            d=min(bk,rem); sp_bk=d; bk-=d; rem-=d
-        if rem>0:
-            d=min(tr,rem); sp_pt+=d; tr-=d; rem-=d
-        if rem>0:
-            d=min(ro,rem); sp_ro=d; ro-=d; rem-=d
-
-        # 3. Dynamic Roth Conversion Engine
-        conv=0.0
-        current_liq = c + bk
-        active_strat = strategy
-        if opt_drain and age <= 72:
-            active_strat = "0.24" 
-
-        safety_allows = True
-        if opt_safety and current_liq < (demand * 0.3):
-            safety_allows = False
-
-        if age <= 72 and active_strat != "0.00" and safety_allows and tr > 0:
-            bkts,rates,ded = brackets(status,sunset,yr)
-            tpct = 0.99 if active_strat=="MAX_FAST" else float(active_strat)
-            target_ceiling = 0.0
-            for bi, rv in enumerate(rates):
-                if rv <= tpct:
-                    target_ceiling = bkts[bi] if bi < len(bkts) else bkts[-1] * 1.5
+        <!-- Main Workspace Split -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            base_agi = floors + sp_pt
-            target_agi_limit = target_ceiling + ded
-            room = max(0.0, target_agi_limit - base_agi)
-            if room > 0: 
-                conv = min(tr, room)
-                tr -= conv
-                ro += conv
-
-        # 4. Tax Evaluation Loop
-        agi = floors + sp_pt + conv
-        bill = tax_calc(agi,status,sunset,yr,srate)
-        total_tax += bill
-        eff_rate = (bill/agi*100) if agi>0 else 0.0
-
-        # 5. Liquidation Hierarchy for Tax Clearance (Fixed Floor Guards to Prevent Mismatches/Leaks)
-        tax_withdrawn_from_pretax = 0.0
-        if c >= bill: 
-            c -= bill; sp_tx = bill
-        elif (c + bk) >= bill: 
-            sp_tx = bill
-            bill -= c; c = 0.0
-            bk -= bill
-        else:
-            sp_tx = c + bk
-            rem_bill = bill - sp_tx
-            c = 0.0; bk = 0.0
-            if tr >= rem_bill:
-                tr -= rem_bill
-                tax_withdrawn_from_pretax = rem_bill
-                sp_pt += rem_bill
-                sp_tx += rem_bill
-                rem_bill = 0.0
-            else:
-                tax_withdrawn_from_pretax = tr
-                sp_pt += tr; sp_tx += tr; rem_bill -= tr; tr = 0.0
-            if rem_bill > 0 and ro >= rem_bill:
-                ro -= rem_bill; sp_tx += rem_bill; rem_bill = 0.0
-
-        irmaa = get_irmaa_tier(agi, status)
-        
-        # Double entry validator logic updated to reflect complete structural tax changes
-        total_outflow = (sp_pt - tax_withdrawn_from_pretax) + sp_bk + sp_ro + sp_tx
-
-        pre_growth_actual = c + bk + tr + ro
-        expected_pre_growth = max(0.0, init_total_assets - total_outflow)
-        delta = pre_growth_actual - expected_pre_growth
-
-        # Compound Yield Engine
-        noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
-        c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
-        nw=max(0.0,c+bk+tr+ro)
-
-        # 7. Audit Flags Checked
-        if not stoch and abs(delta) > 1.0:
-            audit_pass = f'<span class="c-red">❌ LEAK (${delta:,.2f})</span>'
-        else:
-            audit_pass = '<span class="c-green" style="font-weight:600;">✅ PASS</span>'
-
-        logs.append(dict(yr=yr,age=age,demand=demand,deficit=deficit,floors=floors,
-            sp_pt=sp_pt,sp_bk=sp_bk,sp_ro=sp_ro,sp_tx=sp_tx,
-            c=c,bk=bk,tr=tr,ro=ro,rmd=rmd,conv=conv,agi=agi,
-            bill=bill,eff=eff_rate,irmaa=irmaa,nw=nw,audit=audit_pass))
-    return logs, total_tax
-
-def run():
-    try:
-        mode=document.getElementById('simulation_mode').value
-        cur=si('current_age',60); ret=si('retirement_age',65)
-        end=si('projection_end_age',95); infl=sf('inflation_rate',.025)
-        spend=sf('annual_spending',85000)
-        status=document.getElementById('filing_status').value
-        strat=document.getElementById('target_bracket').value
-        regime=document.getElementById('tax_regime_mode').value
-        srate=sf('state_tax_rate',4.0)/100.0
-        sunset=(regime=="SUNSET")
-
-        m_principal = sf('mortgage_principal', 0.0)
-        m_rate = sf('mortgage_rate', 0.0)
-        m_months = si('mortgage_months', 0)
-
-        opt_safety = "active" in document.getElementById('opt-safety').className
-        opt_drain = "active" in document.getElementById('opt-drain').className
-
-        fn=[i.value for i in document.querySelectorAll('.floor-name')]
-        fs=[int(i.value or 0) for i in document.querySelectorAll('.floor-start')]
-        fe=[int(document.getElementById('projection_end_age').value or 95) for _ in fn]
-        fa=[float(i.value or 0) for i in document.querySelectorAll('.floor-amount')]
-        
-        oxn=[i.value for i in document.querySelectorAll('.outlay-name')]
-        oxt=[i.value for i in document.querySelectorAll('.outlay-type')]
-        oxs=[int(i.value or 0) for i in document.querySelectorAll('.outlay-start')]
-        oxe=[int(i.value or 95) for i in document.querySelectorAll('.outlay-end')]
-        oxa=[float(i.value or 0) for i in document.querySelectorAll('.outlay-amount')]
-
-        an=[i.value for i in document.querySelectorAll('.acc-name')]
-        at=[i.value for i in document.querySelectorAll('.acc-type')]
-        ab=[float(i.value or 0) for i in document.querySelectorAll('.acc-balance')]
-
-        if mode=="DETERMINISTIC":
-            logs,total_tax=run_sim(strat,cur,ret,end,infl,spend,status,srate,
-                fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab,sunset,False,opt_safety,opt_drain,
-                m_principal, m_rate, m_months)
-            last=logs[-1] if logs else {'nw':0}
-            
-            def f_k(v): return f"${v/1000:,.0f}k" if v >= 0 else f"-${abs(v)/1000:,.0f}k"
-            document.getElementById('diag').innerText=f"▶ Active Net Worth: {f_k(last['nw'])} | Lifetime Tax Paid: {f_k(total_tax)}"
-
-            lbl=[]; c_=[]; bk_=[]; tr_=[]; ro_=[]
-            demand_=[]; floors_=[]; deficit_=[]; surplus_=[]
-            sp_pt_=[]; sp_bk_=[]; sp_ro_=[]; sp_tx_=[]
-            rmd_=[]; conv_=[]; agi_=[]; bill_=[]; eff_=[]
-            nw_=[]
-            rows=[]
-            for r in logs:
-                lbl.append(f"Age {r['age']}")
-                c_.append(r['c']); bk_.append(r['bk']); tr_.append(r['tr']); ro_.append(r['ro'])
-                demand_.append(r['demand']); floors_.append(r['floors']); deficit_.append(r['deficit'])
-                surplus_.append(r['floors']-r['demand'])
-                sp_pt_.append(r['sp_pt']); sp_bk_.append(r['sp_bk']); sp_ro_.append(r['sp_ro']); sp_tx_.append(r['sp_tx'])
-                rmd_.append(r['rmd']); conv_.append(r['conv'])
-                agi_.append(r['agi']); bill_.append(r['bill']); eff_.append(r['eff'])
-                nw_.append(r['nw'])
+            <!-- Parameters Form Block -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-fit">
+                <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">Simulation Parameters</h2>
                 
-                irmaa_cls=' class="c-amber"' if "Tier" in r['irmaa'] else ' class="val-zero"'
-                rows.append(f"""<tr>
-                    <td class="tl c-muted">{r['yr']}</td><td class="c-muted" style="font-weight:600;">{r['age']}</td>
-                    <td class="grp-budget">{format_cell(r['demand'])}</td>
-                    <td class="grp-budget">{format_cell(r['deficit'], 'val-deficit')}</td>
-                    <td class="grp-sources">{format_cell(r['floors'])}</td>
-                    <td class="grp-sources">{format_cell(r['sp_pt'], 'val-outflow')}</td>
-                    <td class="grp-sources">{format_cell(r['sp_bk'], 'val-outflow')}</td>
-                    <td class="grp-sources">{format_cell(r['sp_ro'], 'val-outflow')}</td>
-                    <td class="grp-sources">{format_cell(r['sp_tx'], 'val-outflow')}</td>
-                    <td class="grp-balances">{format_cell(r['c'], 'val-inflow')}</td>
-                    <td class="grp-balances">{format_cell(r['bk'], 'val-inflow')}</td>
-                    <td class="grp-balances">{format_cell(r['tr'], 'val-inflow')}</td>
-                    <td class="grp-balances">{format_cell(r['ro'], 'val-inflow')}</td>
-                    <td class="grp-taxes c-orange">{format_cell(r['rmd'])}</td>
-                    <td class="grp-taxes">{format_cell(r['conv'], 'val-conversion')}</td>
-                    <td class="grp-taxes c-muted">{format_cell(r['agi'])}</td>
-                    <td class="grp-taxes c-red" style="font-weight:500;">{format_cell(r['bill'])}</td>
-                    <td class="grp-taxes c-amber">{r['eff']:.1f}%</td>
-                    <td class="grp-taxes"{irmaa_cls}>{r['irmaa']}</td>
-                    <td style="white-space:nowrap; padding: 2px 8px; text-align:left;">{r['audit']}</td>
-                </tr>""")
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Conversion Strategy Target</label>
+                        <select id="param_strategy" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 p-2 border focus:ring-blue-500 focus:border-blue-500">
+                            <option value="0.00">No Conversions (Standard RMD)</option>
+                            <option value="0.12">Fill 12% Bracket</option>
+                            <option value="0.22">Fill 22% Bracket</option>
+                            <option value="0.24" selected>Fill 24% Bracket Optimization</option>
+                            <option value="MAX_FAST">Aggressive Maximization</option>
+                        </select>
+                    </div>
 
-            document.getElementById('results-body').innerHTML="".join(rows)
-            window.loadChartData(False,
-                json.dumps(lbl), json.dumps(nw_),
-                json.dumps(c_), json.dumps(bk_), json.dumps(tr_), json.dumps(ro_),
-                json.dumps(demand_), json.dumps(floors_), json.dumps(deficit_), json.dumps(surplus_),
-                json.dumps(sp_pt_), json.dumps(sp_bk_), json.dumps(sp_ro_), json.dumps(sp_tx_),
-                json.dumps(rmd_), json.dumps(conv_), json.dumps(agi_), json.dumps(bill_), json.dumps(eff_))
-        else:
-            trials=150
-            ydata={y:[] for y in range(1,end-cur+2)}
-            for _ in range(trials):
-                lg,_=run_sim(strat,cur,ret,end,infl,spend,status,srate,
-                    fn,fs,fe,fa, oxn,oxt,oxs,oxe,oxa, an,at,ab,sunset,True,opt_safety,opt_drain,
-                    m_principal, m_rate, m_months)
-                for r in lg:
-                    if r['yr'] in ydata: ydata[r['yr']].append(r['nw'])
-            lbl=[]; p50=[]
-            rows=[]
-            for y in sorted(ydata.keys()):
-                age=cur+y-1
-                if age>end: break
-                lbl.append(f"Age {age}")
-                sv=sorted(ydata[y])
-                n=len(sv)
-                v10=sv[int(n*.10)] if n>0 else 0; v50=sv[int(n*.50)] if n>0 else 0; v90=sv[int(n*.90)] if n>0 else 0
-                p50.append(v50)
-                rows.append(f"""<tr>
-                    <td class="tl c-muted">{y}</td><td class="c-muted">{age}</td>
-                    <td colspan="3" class="c-red" style="text-align:center">{f_k(v10)}</td>
-                    <td colspan="4" class="c-green" style="text-align:center;font-weight:700">{f_k(v50)}</td>
-                    <td colspan="4" class="c-cyan" style="text-align:center">{f_k(v90)}</td>
-                    <td colspan="6" class="c-muted" style="text-align:center;font-size:10px">Stochastic Analysis Array Passed</td>
-                </tr>""")
-            document.getElementById('diag').innerText="🎲 Stochastic Analysis Arrays Complete."
-            document.getElementById('results-body').innerHTML="".join(rows)
-            window.loadChartData(True, json.dumps(lbl), json.dumps(p50), json.dumps(p50), json.dumps(p50), json.dumps(p50), "[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]","[]")
-    except Exception as e:
-        window.alert(f"Matrix Engine Core Execution Exception: {str(e)}")
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Current Age</label>
+                            <input type="number" id="param_cur_age" value="60" class="w-full p-2 bg-gray-50 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Retirement Age</label>
+                            <input type="number" id="param_ret_age" value="65" class="w-full p-2 bg-gray-50 border rounded-md">
+                        </div>
+                    </div>
 
-window.execute_sim=run
-</script>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">End Projection Age</label>
+                            <input type="number" id="param_end_age" value="90" class="w-full p-2 bg-gray-50 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Inflation Rate (%)</label>
+                            <input type="number" id="param_infl" value="2.5" step="0.1" class="w-full p-2 bg-gray-50 border rounded-md">
+                        </div>
+                    </div>
 
-<!-- ══ CLIENT INTERACTION AND VISUAL LAYER ══ -->
-<script>
-let pyScript = document.createElement('script');
-pyScript.src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
-document.head.appendChild(pyScript);
-pyScript.onload=async()=>{
-    let py=await loadPyodide();
-    await py.loadPackage("micropip");
-    document.querySelectorAll("script[type='text/python']").forEach(s=>py.runPython(s.textContent));
-    document.getElementById('diag').innerText = "Simulation processing arrays ready.";
-    triggerEngine();
-};
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Base Annual Retirement Spending ($)</label>
+                        <input type="number" id="param_spend" value="110000" class="w-full p-2 bg-gray-50 border rounded-md mt-1">
+                    </div>
 
-let chart=null;
-let D={}, isStoch=false, winYrs=null;
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Filing Status</label>
+                        <select id="param_status" class="w-full p-2 bg-gray-50 border rounded-md mt-1">
+                            <option value="Single">Single Filer</option>
+                            <option value="MFJ" selected>Married Filing Jointly</option>
+                        </select>
+                    </div>
 
-window.loadChartData=function(stoch,lbl,nw,c,bk,tr,ro,demand,floors,deficit,surplus,sp_pt,sp_bk,sp_ro,sp_tx,rmd,conv,agi,bill,eff){
-    isStoch=stoch;
-    D={
-        labels:JSON.parse(lbl), nw:JSON.parse(nw), c:JSON.parse(c), bk:JSON.parse(bk), tr:JSON.parse(tr), ro:JSON.parse(ro),
-        demand:JSON.parse(demand), floors:JSON.parse(floors), deficit:JSON.parse(deficit), surplus:JSON.parse(surplus),
-        sp_pt:JSON.parse(sp_pt), sp_bk:JSON.parse(sp_bk), sp_ro:JSON.parse(sp_ro), sp_tx:JSON.parse(sp_tx),
-        rmd:JSON.parse(rmd), conv:JSON.parse(conv), agi:JSON.parse(agi), bill:JSON.parse(bill), eff:JSON.parse(eff)
-    };
-    buildChart();
-};
+                    <hr class="border-gray-100">
+                    <h3 class="text-sm font-bold text-gray-800">Initial Asset Allocations</h3>
 
-function slice(arr){ return winYrs?arr.slice(0,winYrs):arr; }
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Cash/Checking ($)</label>
+                            <input type="number" id="asset_cash" value="80000" class="w-full p-2 bg-gray-50 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Taxable Brokerage ($)</label>
+                            <input type="number" id="asset_brokerage" value="450000" class="w-full p-2 bg-gray-50 border rounded-md">
+                        </div>
+                    </div>
 
-function buildChart(){
-    const ctx=document.getElementById('mainChart').getContext('2d');
-    if(chart){chart.destroy();}
-    if(!D.labels||!D.labels.length) return;
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Pre-Tax Traditional ($)</label>
+                            <input type="number" id="asset_traditional" value="1650000" class="w-full p-2 bg-gray-50 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Roth Assets ($)</label>
+                            <input type="number" id="asset_roth" value="150000" class="w-full p-2 bg-gray-50 border rounded-md">
+                        </div>
+                    </div>
 
-    const labels=slice(D.labels);
-    const view=document.querySelector('.vtab.active')?.dataset?.view||'NET_WORTH';
-    let datasets=[], chartType='line';
+                    <hr class="border-gray-100">
+                    <h3 class="text-sm font-bold text-gray-800">Structural Guardrails & Mortgages</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Mortgage Balance ($)</label>
+                            <input type="number" id="m_principal" value="250000" class="w-full p-2 bg-gray-50 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Months Remaining</label>
+                            <input type="number" id="m_months" value="120" class="w-full p-2 bg-gray-50 border rounded-md">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500">Mortgage Note Interest Rate (%)</label>
+                        <input type="number" id="m_rate" value="4.25" step="0.01" class="w-full p-2 bg-gray-50 border rounded-md">
+                    </div>
 
-    const line=(label,data,color,opts={})=>({
-        type:'line',label,data:slice(data),borderColor:color,backgroundColor:'transparent',
-        fill:false,tension:.2,pointRadius:1,borderWidth:2,...opts
-    });
-    const bar=(label,data,color,stack='s1')=>({
-        type:'bar',label,data:slice(data),backgroundColor:color,stack,borderWidth:0
-    });
+                    <div class="space-y-2 pt-2">
+                        <label class="flex items-center text-sm font-medium text-gray-700">
+                            <input type="checkbox" id="opt_safety" checked class="rounded mr-2 text-blue-600 focus:ring-blue-500">
+                            Enable Cash-Safety Floor Buffer (30%)
+                        </label>
+                        <label class="flex items-center text-sm font-medium text-gray-700">
+                            <input type="checkbox" id="opt_drain" checked class="rounded mr-2 text-blue-600 focus:ring-blue-500">
+                            Accelerate Traditional Decoupling Pre-72
+                        </label>
+                    </div>
 
-    if(isStoch){
-        datasets=[line('Simulation Base Probability Path Bound',D.nw,'#3fb950',{borderWidth:2.5})];
-    } else {
-        switch(view){
-            case 'NET_WORTH': datasets=[line('Aggregate Net Worth Valuation Trend',D.nw,'#58a6ff', {borderWidth:2.5})]; break;
-            case 'STACKED':
-                chartType='bar';
-                datasets=[
-                    bar('Liquid Cash Reserve Pool',D.c,'#bc8cff','s'),
-                    bar('Taxable Assets (Brokerage Vault)',D.bk,'#58a6ff','s'),
-                    bar('Pre-Tax Traditional Account Assets',D.tr,'#d29922','s'),
-                    bar('Roth Tax-Exempt Account Shield',D.ro,'#3fb950','s'),
-                ]; break;
-            case 'WITHDRAWAL':
-                chartType='bar';
-                datasets=[
-                    bar('Pre-Tax Traditional Outflows',D.sp_pt,'#d29922','w'),
-                    bar('Taxable Account Brokerage Liquidations',D.sp_bk,'#58a6ff','w'),
-                    bar('Roth Complementary Outflows',D.sp_ro,'#3fb950','w'),
-                    bar('IRS Friction Outflow (Aggregate Taxes Paid)',D.sp_tx,'#f85149','w'),
-                ]; break;
-            case 'RMD_CONV':
-                chartType='bar';
-                datasets=[
-                    bar('Mandatory RMD Inflows',D.rmd,'#f0883e','rc'),
-                    bar('Strategic Planned Roth Conversions',D.conv,'#bc8cff','rc2'),
-                ]; break;
-            case 'EFF_RATE': datasets=[line('Effective Consolidated Tax Rate Spectrum (%)',D.eff,'#d29922',{borderWidth:2.5})]; break;
-            case 'IRMAA_AGI':
-                const isMFJ = document.getElementById('filing_status').value === 'MFJ';
-                const t1 = isMFJ ? 258000 : 103000;
-                datasets=[
-                    line('Calculated Combined AGI Tracking Curve',D.agi,'#79c0ff'),
-                    {type:'line',label:'Medicare IRMAA Premium Surcharge Bracket Threshold',data:slice(D.agi).map(()=>t1),borderColor:'rgba(248,81,73,0.6)',borderDash:[5,3],pointRadius:0}
-                ]; break;
-        }
-    }
+                    <button id="trigger_sim" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg shadow transition mt-4 cursor-pointer">
+                        Execute Forward Model
+                    </button>
+                </div>
+            </div>
 
-    chart=new Chart(ctx,{
-        type: chartType,
-        data:{labels,datasets},
-        options:{
-            responsive:true,maintainAspectRatio:false,
-            plugins:{
-                legend:{labels:{color:'#7d8590',font:{size:10,family:"'IBM Plex Mono'"}}},
-                tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ` + (view==='EFF_RATE'? ctx.raw.toFixed(1)+'%' : '$'+Math.round(ctx.raw/1000).toLocaleString()+'k')}}
-            },
-            scales:{
-                x:{stacked:chartType==='bar',ticks:{color:'#7d8590',font:{size:9,family:"'IBM Plex Mono'"}},grid:{color:'rgba(48,54,61,0.3)'}},
-                y:{stacked:chartType==='bar',ticks:{color:'#7d8590',font:{size:10,family:"'IBM Plex Mono'"},callback:v=>view==='EFF_RATE'?v+'%':'$'+Math.round(v/1000)+'k'},grid:{color:'rgba(48,54,61,0.3)'}}
+            <!-- Analysis and Visualization Panel -->
+            <div class="col-span-1 lg:col-span-2 space-y-6">
+                <!-- Interactive Chart Block -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-4 border-b pb-4">
+                        <h2 class="text-xl font-bold text-gray-800">Dynamic Trend Diagnostics</h2>
+                        <!-- Fixed Target Graph Tab Toggles -->
+                        <div class="flex gap-1 bg-gray-100 p-1 rounded-lg text-xs font-semibold">
+                            <button onclick="changeMetric('nw', this)" class="tab-btn px-3 py-1.5 rounded-md transition active">Net Worth</button>
+                            <button onclick="changeMetric('agi', this)" class="tab-btn px-3 py-1.5 rounded-md transition">AGI Profile</button>
+                            <button onclick="changeMetric('bill', this)" class="tab-btn px-3 py-1.5 rounded-md transition">Tax Burden</button>
+                            <button onclick="changeMetric('tr', this)" class="tab-btn px-3 py-1.5 rounded-md transition">Traditional</button>
+                            <button onclick="changeMetric('ro', this)" class="tab-btn px-3 py-1.5 rounded-md transition">Roth Balance</button>
+                        </div>
+                    </div>
+                    <div class="relative h-[340px] w-full">
+                        <canvas id="canvasTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Simulation Output Tables -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800">Accounting Ledger & Simulation Output</h2>
+                        <div id="summary_badge" class="text-sm px-3 py-1 bg-gray-100 rounded-full font-mono font-medium text-gray-700">Total Tax: Calculating...</div>
+                    </div>
+                    <div class="overflow-x-auto border border-gray-100 rounded-lg max-h-[400px] overflow-y-auto text-xs">
+                        <table class="min-w-full divide-y divide-gray-200 text-left">
+                            <thead class="bg-gray-50 sticky top-0 font-bold text-gray-700 shadow-sm z-10">
+                                <tr>
+                                    <th class="p-3">Age</th>
+                                    <th class="p-3">Target Demand</th>
+                                    <th class="p-3">AGI</th>
+                                    <th class="p-3">Calculated Tax</th>
+                                    <th class="p-3">IRMAA Tier</th>
+                                    <th class="p-3">Traditional Asset</th>
+                                    <th class="p-3">Roth Asset</th>
+                                    <th class="p-3">Net Worth</th>
+                                    <th class="p-3">Audit Verification</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sim_output_body" class="divide-y divide-gray-200 text-gray-600 font-mono">
+                                <!-- Triggered inside Python runtime loops -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Integration and JavaScript Global Interfaces -->
+    <script>
+        let currentChartInstance = null;
+        let globalRawSimulationLogs = []; // Captures full forward runway from engine execution
+        let currentActiveKey = 'nw';      // System default focus tracking target
+
+        // Instantiates or overwrites the configuration metrics safely
+        function paintTrendChart(labels, values, metricLabel) {
+            const ctx = document.getElementById('canvasTrendChart').getContext('2d');
+            
+            if (currentChartInstance) {
+                currentChartInstance.destroy();
             }
+
+            currentChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: metricLabel,
+                        data: values,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.06)',
+                        borderWidth: 2.5,
+                        tension: 0.15,
+                        fill: true,
+                        pointBackgroundColor: '#2563eb'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'top' } },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            },
+                            grid: { color: '#f3f4f6' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
         }
-    });
-}
 
-function triggerEngine() {
-    if(window.execute_sim) {
-        window.execute_sim();
-    }
-}
+        // Triggered via Tab Button clicks to alternate dynamic active array streams
+        function changeMetric(dataKey, buttonElement) {
+            currentActiveKey = dataKey;
+            
+            // Manage Tab UI States 
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if(buttonElement) {
+                buttonElement.classList.add('active');
+            }
 
-window.switchSidebarTab = function(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
-    document.querySelectorAll('.t-btn').forEach(el=>el.classList.remove('active'));
-    document.getElementById('tab-'+tabId).classList.add('active');
-    if (event && event.target) {
-        event.target.classList.add('active');
-    }
-};
+            if (!globalRawSimulationLogs || globalRawSimulationLogs.length === 0) return;
 
-window.toggleSandboxOpt = function(optId) {
-    document.getElementById('opt-'+optId).classList.toggle('active');
-    triggerEngine();
-};
+            // Extract the matching values array dynamically
+            const labels = globalRawSimulationLogs.map(log => `Age ${log.age}`);
+            const values = globalRawSimulationLogs.map(log => log[dataKey]);
+            
+            // Pretty map dataset text titles
+            const labelMap = {
+                'nw': 'Aggregate Net Worth ($)',
+                'agi': 'Modified Adjusted Gross Income ($)',
+                'bill': 'Annual Statutory Tax Liability ($)',
+                'tr': 'Traditional Account Balance ($)',
+                'ro': 'Roth Account Balance ($)'
+            };
 
-window.applyPreset = function(presetType) {
-    if(presetType === 'valley') {
-        document.getElementById('target_bracket').value = "0.12";
-        document.getElementById('opt-drain').classList.add('active');
-        document.getElementById('opt-safety').classList.add('active');
-    } else if(presetType === 'irmaa') {
-        document.getElementById('target_bracket').value = "0.22";
-        document.getElementById('opt-drain').classList.remove('active');
-    }
-    triggerEngine();
-};
+            paintTrendChart(labels, values, labelMap[dataKey] || dataKey);
+        }
 
-window.loadPreset = function(presetType) {
-    document.getElementById('income-floor-body').innerHTML = '';
-    document.getElementById('outlays-body').innerHTML = '';
-    document.getElementById('accounts-body').innerHTML = '';
+        // Bridge function exposed globally so Brython execution loops can forward data packets
+        function pushSimDataToJS(jsonStringData, accumulatedTax) {
+            globalRawSimulationLogs = JSON.parse(jsonStringData);
+            document.getElementById('summary_badge').innerText = `Total Lifetime Tax Surcharge: $${accumulatedTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            // Re-render chart with the current metric view selection
+            const activeTab = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.classList.contains('active'));
+            changeMetric(currentActiveKey, activeTab);
+        }
+    </script>
 
-    if(presetType === 'fire') {
-        document.getElementById('current_age').value = 40;
-        document.getElementById('retirement_age').value = 45;
-        document.getElementById('projection_end_age').value = 90;
-        document.getElementById('annual_spending').value = 100000;
-        document.getElementById('target_bracket').value = "0.12";
-        document.getElementById('filing_status').value = "MFJ";
-        document.getElementById('mortgage_principal').value = 400000;
-        document.getElementById('mortgage_rate').value = 3.75;
-        document.getElementById('mortgage_months').value = 120;
-        addFloorRowExplicit("Social Security Baseline", 67, 30000);
-        addAccountRowExplicit("Pre-Tax Legacy 401k", "Traditional", 1500000);
-        addAccountRowExplicit("Taxable Brokerage Liquid Assets", "Brokerage", 1000000);
-    } 
-    else if(presetType === 'ngpf') {
-        document.getElementById('current_age').value = 25;
-        document.getElementById('retirement_age').value = 65;
-        document.getElementById('projection_end_age').value = 95;
-        document.getElementById('annual_spending').value = 48000;
-        document.getElementById('target_bracket').value = "0.00";
-        document.getElementById('filing_status').value = "SINGLE";
-        document.getElementById('mortgage_principal').value = 0;
-        document.getElementById('mortgage_rate').value = 0;
-        document.getElementById('mortgage_months').value = 0;
-        addFloorRowExplicit("Social Security Index", 67, 24000);
-        addAccountRowExplicit("Pre-Tax Traditional Core", "Traditional", 20000);
-        addAccountRowExplicit("Taxable Rainy Day Savings", "Brokerage", 5000);
-    } 
-    else if(presetType === 'irmaa') {
-        document.getElementById('current_age').value = 62;
-        document.getElementById('retirement_age').value = 65;
-        document.getElementById('projection_end_age').value = 95;
-        document.getElementById('annual_spending').value = 145000;
-        document.getElementById('target_bracket').value = "0.24";
-        document.getElementById('filing_status').value = "MFJ";
-        document.getElementById('mortgage_principal').value = 180000;
-        document.getElementById('mortgage_rate').value = 5.25;
-        document.getElementById('mortgage_months').value = 72;
-        addFloorRowExplicit("Social Security Max Distribution", 70, 52000);
-        addOutlayRowExplicit("World Tour Expense", "One-Time", 66, 66, 45000);
-        addAccountRowExplicit("Pre-Tax Mega IRA Roll", "Traditional", 3200000);
-        addAccountRowExplicit("Taxable Stock Portfolio", "Brokerage", 350000);
-    }
-    triggerEngine();
-};
+    <!-- Embedded Brython Core Logic Engine Framework -->
+    <script type="text/python">
+    from browser import document, window, html
+    import json
 
-window.setWindow = function(y) {
-    winYrs=y;
-    document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
-    if (event && event.target) {
-        event.target.classList.add('active');
-    }
-    buildChart();
-};
+    # 2026 Inflation-Adjusted Statutory RMD Life Factor Threshold Lookup
+    def rmd_factor(age):
+        factors = {
+            72: 27.4, 73: 26.5, 74: 25.5, 75: 24.6, 76: 23.7, 77: 22.9, 78: 22.0, 79: 21.1, 80: 20.2,
+            81: 19.4, 82: 18.5, 83: 17.7, 84: 16.8, 85: 16.0, 86: 15.2, 87: 14.4, 88: 13.7, 89: 12.9, 90: 12.2
+        }
+        if age < 72: return 0.0
+        return factors.get(age, 11.5 if age > 90 else 27.4)
 
-window.toggleCol = function(g) {
-    document.getElementById('ledger-table').classList.toggle('hide-'+g);
-    document.getElementById('tog-'+g).classList.toggle('active');
-};
+    # Simplified Brackets Configurator For Projections 
+    def brackets(status, sunset, yr):
+        if status == "MFJ":
+            return [23200, 94300, 201050, 383900, 487450, 731200], [0.10, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37], 29200
+        else:
+            return [11600, 47150, 100525, 191950, 243725, 609350], [0.10, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37], 14600
 
-window.toggleModeUI = function() {
-    const s=document.getElementById('simulation_mode').value==='STOCHASTIC';
-    document.querySelectorAll('.vtab:not([data-view="NET_WORTH"])').forEach(b=>{
-        b.style.opacity=s?'.35':'1'; b.style.pointerEvents=s?'none':'auto';
-    });
-};
+    def tax_calc(agi, status, sunset, yr, srate):
+        bkts, rates, ded = brackets(status, sunset, yr)
+        taxable = max(0.0, agi - ded)
+        tax = 0.0
+        prev = 0.0
+        for b, r in zip(bkts, rates):
+            if taxable > b:
+                tax += (b - prev) * r
+                prev = b
+            else:
+                tax += (taxable - prev) * r
+                prev = taxable
+                break
+        if taxable > prev:
+            tax += (taxable - prev) * rates[-1]
+        return tax + (taxable * (srate / 100.0))
 
-function addFloorRow() {
-    addFloorRowExplicit("New Floor", 67, 25000);
-}
+    # Real-World Medicare IRMAA Bracket Data (2026 Surcharges)
+    def get_irmaa_tier(agi, status):
+        if status == "MFJ":
+            if agi > 750000: return "⚠️ Tier 5"
+            if agi > 410000: return "⚠️ Tier 4"
+            if agi > 342000: return "⚠️ Tier 3"
+            if agi > 274000: return "⚠️ Tier 2"
+            if agi > 218000: return "⚠️ Tier 1"
+        else:
+            if agi > 500000: return "⚠️ Tier 5"
+            if agi > 205000: return "⚠️ Tier 4"
+            if agi > 171000: return "⚠️ Tier 3"
+            if agi > 137000: return "⚠️ Tier 2"
+            if agi > 109000: return "⚠️ Tier 1"
+        return "—"
 
-function addFloorRowExplicit(name, start, amount) {
-    document.getElementById('income-floor-body').insertAdjacentHTML('beforeend', `<tr>
-        <td class="tl"><input type="text" class="floor-name" value="${name}"></td>
-        <td><input type="number" class="floor-start" value="${start}" style="width:35px;"></td>
-        <td><input type="number" class="floor-amount" value="${amount}" style="width:55px;"></td>
-        <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
-}
+    # Leakless Forward Run Execution Matrix
+    def run_sim(strategy, cur_age, ret_age, end_age, infl, spend, status, srate,
+                oxn, oxt, oxs, oxe, oxa, an, at, ab, sunset, stoch, opt_safety, opt_drain,
+                m_principal, m_rate, m_months):
+        
+        c = sum(b for t, b in zip(at, ab) if t == "Cash")
+        bk = sum(b for t, b in zip(at, ab) if t == "Brokerage")
+        tr = sum(b for t, b in zip(at, ab) if t == "Traditional")
+        ro = sum(b for t, b in zip(at, ab) if t == "Roth")
+        
+        rc, rb, rt, rr = 0.02, 0.055, 0.06, 0.065
+        logs = []
+        total_tax = 0.0
+        
+        m_annual_payment = 0.0
+        months_left = m_months
+        if m_principal > 0 and m_months > 0:
+            mr = (m_rate / 100.0) / 12.0
+            if mr > 0:
+                m_monthly = m_principal * (mr * (1 + mr)**m_months) / ((1 + mr)**m_months - 1)
+            else:
+                m_monthly = m_principal / m_months
+            m_annual_payment = m_monthly * 12.0
 
-function addOutlayRow() {
-    addOutlayRowExplicit("New Outlay", "Recurring", 60, 70, 5000);
-}
+        for yr in range(1, end_age - cur_age + 2):
+            age = cur_age + yr - 1
+            if age > end_age: break
+            im = (1 + infl)**(yr - 1)
+            
+            current_year_mortgage = 0.0
+            if months_left > 0:
+                if months_left >= 12:
+                    current_year_mortgage = m_annual_payment
+                    months_left -= 12
+                else:
+                    current_year_mortgage = (m_annual_payment / 12.0) * months_left
+                    months_left = 0
+                    
+            demand = (spend * im if age >= ret_age else 0.0) + current_year_mortgage
+            
+            for on, ot, os, oe, oa in zip(oxn, oxt, oxs, oxe, oxa):
+                if os <= age <= oe:
+                    if ot == "One-Time" and age != os: continue
+                    demand += oa * im
+                        
+            floors = 0.0
+            deficit = max(0.0, demand - floors)
+            init_total_assets = c + bk + tr + ro
 
-function addOutlayRowExplicit(name, type, start, end, amount) {
-    const rSel = type === 'Recurring' ? 'selected' : '';
-    const oSel = type === 'One-Time' ? 'selected' : '';
+            # 1. Statutory RMD Execution
+            rmd = 0.0
+            f = rmd_factor(age)
+            if f > 0 and tr > 0: rmd = min(tr, tr / f)
+            sp_pt = rmd; sp_bk = 0.0; sp_ro = 0.0; sp_tx = 0.0
+            tr = max(0.0, tr - rmd)
+            
+            rem = deficit - rmd
+            if rem < 0:
+                c += abs(rem)
+                rem = 0.0
+
+            # 2. Sequential Drawdown Cascade
+            if rem > 0:
+                d = min(bk, rem); sp_bk = d; bk -= d; rem -= d
+            if rem > 0:
+                d = min(tr, rem); sp_pt += d; tr -= d; rem -= d
+            if rem > 0:
+                d = min(ro, rem); sp_ro = d; ro -= d; rem -= d
+
+            # 3. Dynamic Roth Conversion Engine
+            conv = 0.0
+            current_liq = c + bk
+            active_strat = strategy
+            if opt_drain and age <= 72:
+                active_strat = "0.24"
+
+            safety_allows = True
+            if opt_safety and current_liq < (demand * 0.3):
+                safety_allows = False
+
+            if age <= 72 and active_strat != "0.00" and safety_allows and tr > 0:
+                bkts, rates, ded = brackets(status, sunset, yr)
+                tpct = 0.24 if active_strat == "0.24" else (0.12 if active_strat == "0.12" else 0.22)
+                target_ceiling = 0.0
+                for bi, rv in enumerate(rates):
+                    if rv <= tpct:
+                        target_ceiling = bkts[bi] if bi < len(bkts) else bkts[-1] * 1.5
+                
+                base_agi = floors + sp_pt
+                target_agi_limit = target_ceiling + ded
+                room = max(0.0, target_agi_limit - base_agi)
+                if room > 0:
+                    conv = min(tr, room)
+                    tr -= conv
+                    ro += conv
+
+            # 4. Tax Evaluation Loop
+            agi = floors + sp_pt + conv
+            bill = tax_calc(agi, status, sunset, yr, 0.0)
+            
+            # 5. Liquidation Hierarchy for Tax Clearance (Dynamic Fallback Fix)
+            tax_withdrawn_from_pretax = 0.0
+            if c >= bill:
+                c -= bill; sp_tx = bill
+            elif (c + bk) >= bill:
+                sp_tx = bill
+                bill -= c; c = 0.0
+                bk -= bill
+            else:
+                sp_tx = c + bk
+                rem_bill = bill - sp_tx
+                c = 0.0; bk = 0.0
+                
+                if tr >= rem_bill:
+                    tr -= rem_bill
+                    tax_withdrawn_from_pretax = rem_bill
+                    sp_pt += rem_bill
+                    sp_tx += rem_bill
+                    rem_bill = 0.0
+                else:
+                    tax_withdrawn_from_pretax = tr
+                    sp_pt += tr; sp_tx += tr; rem_bill -= tr; tr = 0.0
+                if rem_bill > 0 and ro >= rem_bill:
+                    ro -= rem_bill; sp_tx += rem_bill; rem_bill = 0.0
+
+            total_tax += sp_tx
+            irmaa = get_irmaa_tier(agi, status)
+            
+            total_outflow = (sp_pt - tax_withdrawn_from_pretax) + sp_bk + sp_ro + sp_tx
+            pre_growth_actual = c + bk + tr + ro
+            expected_pre_growth = max(0.0, init_total_assets - total_outflow)
+            delta = pre_growth_actual - expected_pre_growth
+
+            # Growth Adjustments
+            c *= (1 + rc); bk *= (1 + rb); tr *= (1 + rt); ro *= (1 + rr)
+            nw = max(0.0, c + bk + tr + ro)
+
+            if abs(delta) > 1.0:
+                audit_pass = f'<span class="c-red">❌ LEAK (${delta:,.2f})</span>'
+            else:
+                audit_pass = '<span class="c-green">✅ PASS</span>'
+
+            logs.append(dict(
+                yr=yr, age=age, demand=round(demand,2), deficit=round(deficit,2), floors=round(floors,2),
+                sp_pt=round(sp_pt,2), sp_bk=round(sp_bk,2), sp_ro=round(sp_ro,2), sp_tx=round(sp_tx,2),
+                c=round(c,2), bk=round(bk,2), tr=round(tr,2), ro=round(ro,2), rmd=round(rmd,2), conv=round(conv,2),
+                agi=round(agi,2), bill=round(bill,2), irmaa=irmaa, nw=round(nw,2), audit=audit_pass
+            ))
+        return logs, total_tax
+
+    # Event Handler linking UI Form Inputs to Brython Processing
+    def execute_simulation_wrapper(evt):
+        strategy = document["param_strategy"].value
+        cur_age = int(document["param_cur_age"].value)
+        ret_age = int(document["param_ret_age"].value)
+        end_age = int(document["param_end_age"].value)
+        infl = float(document["param_infl"].value) / 100.0
+        spend = float(document["param_spend"].value)
+        status = document["param_status"].value
+        
+        # Hardcoded IRMAA Presets for One-Time World Tour Shock Outlay Simulation
+        oxn, oxt, oxs, oxe, oxa = ["World Tour"], ["One-Time"], [66], [66], [45000]
+        
+        # Pull Asset Allocations from Document
+        an = ["Cash", "Brokerage", "Traditional", "Roth"]
+        at = ["Cash", "Brokerage", "Traditional", "Roth"]
+        ab = [
+            float(document["asset_cash"].value),
+            float(document["asset_brokerage"].value),
+            float(document["asset_traditional"].value),
+            float(document["asset_roth"].value)
+        ]
+
+        m_p = float(document["m_principal"].value)
+        m_r = float(document["m_rate"].value)
+        m_m = int(document["m_months"].value)
+
+        opt_safety = document["opt_safety"].checked
+        opt_drain = document["opt_drain"].checked
+
+        # Run Core Engine
+        logs, total_tax = run_sim(
+            strategy, cur_age, ret_age, end_age, infl, spend, status, 0.0,
+            oxn, oxt, oxs, oxe, oxa, an, at, ab, False, False, opt_safety, opt_drain,
+            m_p, m_r, m_m
+        )
+
+        # Repopulate Data Grid Document Elements
+        table_body = document["sim_output_body"]
+        table_body.innerHTML = ""
+        
+        for row in logs:
+            tr_elem = html.TR()
+            tr_elem <= html.TD(f"{row['age']}", className="p-3 font-semibold text-gray-900")
+            tr_elem <= html.TD(f"${row['demand']}:,", className="p-3 text-right")
+            tr_elem <= html.TD(f"${row['agi']}:,", className="p-3 text-right text-blue-600")
+            tr_elem <= html.TD(f"${row['bill']}:,", className="p-3 text-right text-red-500")
+            tr_elem <= html.TD(f"{row['irmaa']}", className="p-3 text-center")
+            tr_elem <= html.TD(f"${row['tr']}:,", className="p-3 text-right")
+            tr_elem <= html.TD(f"${row['ro']}:,", className="p-3 text-right")
+            tr_elem <= html.TD(f"${row['nw']}:,", className="p-3 text-right font-bold text-gray-900")
+            tr_elem <= html.TD(row['audit'], className="p-3 text-center")
+            table_body <= tr_elem
+
+        # Pass data context back to window Chart instances safely
+        window.pushSimDataToJS(json.dumps(logs), total_tax)
+
+    document["trigger_sim"].bind("click", execute_simulation_wrapper)
     
-    document.getElementById('outlays-body').insertAdjacentHTML('beforeend', `<tr>
-        <td class="tl"><input type="text" class="outlay-name" value="${name}"></td>
-        <td><select class="outlay-type" style="width:55px;">
-            <option value="Recurring" ${rSel}>Recur</option>
-            <option value="One-Time" ${oSel}>1-Time</option>
-        </select></td>
-        <td><input type="number" class="outlay-start" value="${start}" style="width:30px;"></td>
-        <td><input type="number" class="outlay-end" value="${end}" style="width:30px;"></td>
-        <td><input type="number" class="outlay-amount" value="${amount}" style="width:50px;"></td>
-        <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
-}
-
-function addAccountRow() {
-    addAccountRowExplicit("New Asset Container", "Brokerage", 100000);
-}
-
-function addAccountRowExplicit(name, type, balance) {
-    const tSel = type === 'Traditional' ? 'selected' : '';
-    const rSel = type === 'Roth' ? 'selected' : '';
-    const bSel = type === 'Brokerage' ? 'selected' : '';
-    
-    document.getElementById('accounts-body').insertAdjacentHTML('beforeend', `<tr>
-        <td class="tl"><input type="text" class="acc-name" value="${name}"></td>
-        <td><select class="acc-type" style="width:50px;">
-            <option value="Traditional" ${tSel}>Trad</option>
-            <option value="Roth" ${rSel}>Roth</option>
-            <option value="Brokerage" ${bSel}>Brok</option>
-        </select></td>
-        <td><input type="number" class="acc-balance" value="${balance}" style="width:65px;"></td>
-        <td><button class="bdel" onclick="this.closest('tr').remove()">×</button></td></tr>`);
-}
-
-document.addEventListener('change', () => triggerEngine());
-</script>
+    # Auto run once on startup initializer
+    execute_simulation_wrapper(None)
+    </script>
 </body>
 </html>
