@@ -459,9 +459,9 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         if opt_drain and age <= 72:
             active_strat = "0.24" 
 
-        safety_allows = true
+        safety_allows = True
         if opt_safety and current_liq < (demand * 0.3):
-            safety_allows = false
+            safety_allows = False
 
         if age <= 72 and active_strat != "0.00" and safety_allows and tr > 0:
             bkts,rates,ded = brackets(status,sunset,yr)
