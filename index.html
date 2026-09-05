@@ -228,13 +228,13 @@
         <table class="mt"><tbody id="accounts-body">
             <tr>
                 <td class="tl"><input type="text" class="acc-name" value="Pre-Tax IRA" onchange="triggerEngine()"></td>
-                <td><select class="acc-type" style="width:50px;" onchange="triggerEngine()"><option value="Traditional" selected>Trad</option><option value="Roth">Roth</option><option value="Brokerage">Brok</option></select></td>
+                <td><select class="acc-type" style="width:50px;" onchange="triggerEngine()"><option value="Traditional" selected>Trad</option><option value="Roth">Roth</option><option value="Brokerage">Brok</option><option value="Cash">Cash</option></select></td>
                 <td><input type="number" class="acc-balance" value="1450000" style="width:65px;" onchange="triggerEngine()"></td>
                 <td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td>
             </tr>
             <tr>
                 <td class="tl"><input type="text" class="acc-name" value="Taxable Brokerage" onchange="triggerEngine()"></td>
-                <td><select class="acc-type" style="width:50px;" onchange="triggerEngine()"><option value="Traditional">Trad</option><option value="Roth">Roth</option><option value="Brokerage" selected>Brok</option></select></td>
+                <td><select class="acc-type" style="width:50px;" onchange="triggerEngine()"><option value="Traditional">Trad</option><option value="Roth">Roth</option><option value="Brokerage" selected>Brok</option><option value="Cash">Cash</option></select></td>
                 <td><input type="number" class="acc-balance" value="300000" style="width:65px;" onchange="triggerEngine()"></td>
                 <td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td>
             </tr>
@@ -349,7 +349,7 @@
     function addAccountRow() {
         const html = `<tr>
             <td class="tl"><input type="text" class="acc-name" value="Supplemental Roth" onchange="triggerEngine()"></td>
-            <td><select class="acc-type" style="width:50px;" onchange="triggerEngine()"><option value="Traditional">Trad</option><option value="Roth" selected>Roth</option><option value="Brokerage">Brok</option></select></td>
+            <td><select class="acc-type" style="width:50px;" onchange="triggerEngine()"><option value="Traditional">Trad</option><option value="Roth" selected>Roth</option><option value="Brokerage">Brok</option><option value="Cash">Cash</option></select></td>
             <td><input type="number" class="acc-balance" value="50000" style="width:65px;" onchange="triggerEngine()"></td>
             <td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td>
         </tr>`;
@@ -365,26 +365,26 @@
             document.getElementById('target_bracket').value = "0.12";
             document.getElementById('income-floor-body').innerHTML = '';
             document.getElementById('accounts-body').innerHTML = `
-                <tr><td class="tl"><input type="text" class="acc-name" value="Taxable Bridge" onchange="triggerEngine()"></td><td><select class="acc-type" onchange="triggerEngine()"><option value="Brokerage" selected>Brok</option></select></td><td><input type="number" class="acc-balance" value="1200000" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>
-                <tr><td class="tl"><input type="text" class="acc-name" value="Rollover IRA" onchange="triggerEngine()"></td><td><select class="acc-type" onchange="triggerEngine()"><option value="Traditional" selected>Trad</option></select></td><td><input type="number" class="acc-balance" value="1500000" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>`;
+                <tr><td class="tl"><input type="text" class="acc-name" value="Taxable Bridge" onchange="triggerEngine()"></td><td><select class="acc-type" style="width:50px;" onchange="triggerEngine()"><option value="Traditional">Trad</option><option value="Roth">Roth</option><option value="Brokerage" selected>Brok</option><option value="Cash">Cash</option></select></td><td><input type="number" class="acc-balance" value="1200000" style="width:65px;" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>
+                <tr><td class="tl"><input type="text" class="acc-name" value="Rollover IRA" onchange="triggerEngine()"></td><td><select class="acc-type" style="width:50px;" onchange="triggerEngine()"><option value="Traditional" selected>Trad</option><option value="Roth">Roth</option><option value="Brokerage">Brok</option><option value="Cash">Cash</option></select></td><td><input type="number" class="acc-balance" value="1500000" style="width:65px;" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>`;
         } else if (key === 'ngpf') {
             document.getElementById('current_age').value = 62;
             document.getElementById('retirement_age').value = 65;
             document.getElementById('annual_spending').value = 55000;
             document.getElementById('target_bracket').value = "0.00";
             document.getElementById('income-floor-body').innerHTML = `
-                <tr><td class="tl"><input type="text" class="floor-name" value="Social Security" onchange="triggerEngine()"></td><td><input type="number" class="floor-start" value="67" onchange="triggerEngine()"></td><td><input type="number" class="floor-amount" value="28000" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>`;
+                <tr><td class="tl"><input type="text" class="floor-name" value="Social Security" onchange="triggerEngine()"></td><td><input type="number" class="floor-start" value="67" style="width:35px;" onchange="triggerEngine()"></td><td><input type="number" class="floor-amount" value="28000" style="width:55px;" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>`;
             document.getElementById('accounts-body').innerHTML = `
-                <tr><td class="tl"><input type="text" class="acc-name" value="403b Nest Egg" onchange="triggerEngine()"></td><td><select class="acc-type" onchange="triggerEngine()"><option value="Traditional" selected>Trad</option></select></td><td><input type="number" class="acc-balance" value="600000" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>`;
+                <tr><td class="tl"><input type="text" class="acc-name" value="403b Nest Egg" onchange="triggerEngine()"></td><td><select class="acc-type" style="width:50px;" onchange="triggerEngine()"><option value="Traditional" selected>Trad</option><option value="Roth">Roth</option><option value="Brokerage">Brok</option><option value="Cash">Cash</option></select></td><td><input type="number" class="acc-balance" value="600000" style="width:65px;" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>`;
         } else if (key === 'irmaa') {
             document.getElementById('current_age').value = 63;
             document.getElementById('retirement_age').value = 65;
             document.getElementById('annual_spending').value = 130000;
-            document.getElementById('target_bracket').value = "0.24";
+            document.getElementById('target_bracket').value = "0.22";
             document.getElementById('income-floor-body').innerHTML = `
-                <tr><td class="tl"><input type="text" class="floor-name" value="Pensions" onchange="triggerEngine()"></td><td><input type="number" class="floor-start" value="65" onchange="triggerEngine()"></td><td><input type="number" class="floor-amount" value="50000" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>`;
+                <tr><td class="tl"><input type="text" class="floor-name" value="Pensions" onchange="triggerEngine()"></td><td><input type="number" class="floor-start" value="65" style="width:35px;" onchange="triggerEngine()"></td><td><input type="number" class="floor-amount" value="50000" style="width:55px;" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>`;
             document.getElementById('accounts-body').innerHTML = `
-                <tr><td class="tl"><input type="text" class="acc-name" value="Fat IRA" onchange="triggerEngine()"></td><td><select class="acc-type" onchange="triggerEngine()"><option value="Traditional" selected>Trad</option></select></td><td><input type="number" class="acc-balance" value="3200000" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>`;
+                <tr><td class="tl"><input type="text" class="acc-name" value="Fat IRA" onchange="triggerEngine()"></td><td><select class="acc-type" style="width:50px;" onchange="triggerEngine()"><option value="Traditional" selected>Trad</option><option value="Roth">Roth</option><option value="Brokerage">Brok</option><option value="Cash">Cash</option></select></td><td><input type="number" class="acc-balance" value="3200000" style="width:65px;" onchange="triggerEngine()"></td><td><button class="bdel" onclick="this.closest('tr').remove(); triggerEngine();">×</button></td></tr>`;
         }
         triggerEngine();
     }
@@ -604,6 +604,8 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
 
         # 2. Sequential Drawdown Cascade
         if rem>0:
+            d=min(c,rem); c-=d; rem-=d
+        if rem>0:
             d=min(bk,rem); sp_bk=d; bk-=d; rem-=d
         if rem>0:
             d=min(tr,rem); sp_pt+=d; tr-=d; rem-=d
@@ -725,9 +727,10 @@ def run():
         fs=[int(i.value or 0) for i in document.querySelectorAll('.floor-start')]
         fe=[95 for _ in fn]
         fa=[float(i.value or 0) for i in document.querySelectorAll('.floor-amount')]
-        an=[i.value for i in document.querySelectorAll('.acc-name')]
-        at=[i.value for i in document.querySelectorAll('.acc-type')]
-        ab=[float(i.value or 0) for i in document.querySelectorAll('.acc-balance')]
+        
+        an=[el.value for el in document.querySelectorAll('#accounts-body .acc-name')]
+        at=[el.value for el in document.querySelectorAll('#accounts-body .acc-type')]
+        ab=[float(el.value or 0) for el in document.querySelectorAll('#accounts-body .acc-balance')]
 
         if mode=="DETERMINISTIC":
             logs,total_tax=run_sim(strat,cur,ret,end,infl,spend,status,srate,
