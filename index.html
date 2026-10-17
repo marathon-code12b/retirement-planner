@@ -524,6 +524,16 @@
         });
     }
 
+    // Global error handlers to surface runtime problems in the diag banner and console
+    window.addEventListener('error', (e) => {
+        try { document.getElementById('diag').innerText = `❌ Runtime Error: ${e.message}`; } catch(_){}
+        console.error('Window error', e);
+    });
+    window.addEventListener('unhandledrejection', (ev) => {
+        try { document.getElementById('diag').innerText = `❌ Promise Rejection: ${String(ev.reason)}`; } catch(_){}
+        console.error('Unhandled rejection', ev.reason);
+    });
+
     document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => { triggerEngine(); }, 1500);
     });
