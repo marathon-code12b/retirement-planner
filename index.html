@@ -403,19 +403,26 @@
     }
 
     function triggerEngine() {
-        // If the Python runtime is ready, run the simulation. Otherwise retry shortly.
-        if (window.pyRunSim) {
+        const runner = window.pyRunSim || window.__pyRunSim;
+        if (runner) {
             try {
-                window.pyRunSim();
+                runner();
             } catch (e) {
                 document.getElementById('diag').innerText = `❌ Python Runtime Exception: ${String(e)}`;
                 console.error('pyRunSim error', e);
             }
-        } else {
-            // show a clearer waiting message and retry after a short delay
-            document.getElementById('diag').innerText = 'Warming up simulation environment... (waiting for Python runtime)';
-            setTimeout(triggerEngine, 300);
+            return;
         }
+
+        const tries = window.__pySimRetryCount || 0;
+        if (tries < 80) {
+            window.__pySimRetryCount = tries + 1;
+            document.getElementById('diag').innerText = 'Warming up simulation environment... (waiting for Python runtime)';
+            setTimeout(triggerEngine, 250);
+            return;
+        }
+
+        document.getElementById('diag').innerText = '❌ Python runtime did not initialize. Check PyScript load or browser console.';
     }
 
     window.loadChartData = function(isStochastic, labelsJson, nwJson, cJson, bkJson, trJson, roJson, demandJson, floorsJson, deficitJson, surplusJson, spPtJson, spBkJson, spRoJson, spTxJson, rmdJson, convJson, agiJson, billJson, effJson, p10Json, p90Json) {
@@ -540,7 +547,7 @@
 </script>
 
 <!-- ══ SCENARIO AUDITING COMPUTATION ENGINE ══ -->
-<script type="text/python">
+<script type="py">
 import js, json
 from js import document, window
 
