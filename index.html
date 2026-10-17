@@ -403,8 +403,18 @@
     }
 
     function triggerEngine() {
+        // If the Python runtime is ready, run the simulation. Otherwise retry shortly.
         if (window.pyRunSim) {
-            window.pyRunSim();
+            try {
+                window.pyRunSim();
+            } catch (e) {
+                document.getElementById('diag').innerText = `❌ Python Runtime Exception: ${String(e)}`;
+                console.error('pyRunSim error', e);
+            }
+        } else {
+            // show a clearer waiting message and retry after a short delay
+            document.getElementById('diag').innerText = 'Warming up simulation environment... (waiting for Python runtime)';
+            setTimeout(triggerEngine, 300);
         }
     }
 
