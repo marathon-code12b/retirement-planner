@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Matrix Engine v4.7 (Diagnostic Ledger Edition)</title>
+    <title>Retirement Matrix Engine v4.8 (Cash-Flow Accounting Edition)</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="vendor/chart.min.js"></script>
     <!-- PyScript Core -->
@@ -137,7 +137,7 @@
 <body>
 
 <div class="hdr">
-    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.7</h1><p>Diagnostic Trace Ledger Mode enabled</p></div>
+    <div><h1>⚡ RETIREMENT MATRIX ENGINE v4.8</h1><p>Cash-flow accounting and diagnostic ledger enabled</p></div>
     <div id="diag">Warming up simulation environment...</div>
 </div>
 
@@ -213,7 +213,7 @@
         </div>
         <div><label>State Tax (%)</label><input type="number" id="state_tax_rate" step="0.1" value="4.0" style="width:48%" onchange="triggerEngine()"></div>
 
-        <div class="slabel">Income Floors</div>
+        <div class="slabel">Income Floors (modeled as taxable)</div>
         <table class="mt"><tbody id="income-floor-body">
             <tr>
                 <td class="tl"><input type="text" class="floor-name" value="Social Security" onchange="triggerEngine()"></td>
@@ -278,15 +278,15 @@
                 <thead>
                     <tr>
                         <th class="tl">Yr</th><th>Age</th>
-                        <th class="grp-budget c-cyan">Gross Need</th><th class="grp-budget c-cyan">Deficit</th>
+                        <th class="grp-budget c-cyan">Gross Need</th><th class="grp-budget c-cyan">Deficit</th><th class="grp-budget c-red">Unfunded Spend</th>
                         <th class="grp-sources c-amber">Floors</th><th class="grp-sources c-amber">PreTax Out</th><th class="grp-sources">Brokerage Out</th><th class="grp-sources c-green">Roth Out</th><th class="grp-sources c-red">Tax Paid</th>
                         <th class="grp-balances">Cash Reserves</th><th class="grp-balances">Brokerage Asset</th><th class="grp-balances c-amber">PreTax Asset</th><th class="grp-balances c-green">Roth Asset</th>
-                        <th class="grp-taxes c-orange">Age RMD</th><th class="grp-taxes c-purple">Conv. Executed</th><th class="grp-taxes c-muted">AGI Metric</th><th class="grp-taxes c-red">Tax Owed</th><th class="grp-taxes c-amber">Eff %</th><th class="grp-taxes">IRMAA Tier</th>
+                        <th class="grp-taxes c-orange">Age RMD</th><th class="grp-taxes c-purple">Conv. Executed</th><th class="grp-taxes c-muted">AGI Metric</th><th class="grp-taxes c-red">Tax Owed</th><th class="grp-taxes c-red">Tax Unpaid</th><th class="grp-taxes c-amber">Eff %</th><th class="grp-taxes">IRMAA Tier</th>
                         <th style="color:var(--green)">Audit Math &amp; Delta</th>
                     </tr>
                 </thead>
                 <tbody id="results-body">
-                    <tr><td colspan="20" class="tl c-muted" style="padding:20px; text-align:center;">Load script runtime loops and execute simulation matrix.</td></tr>
+                    <tr><td colspan="22" class="tl c-muted" style="padding:20px; text-align:center;">Load script runtime loops and execute simulation matrix.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -608,7 +608,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
     ro=sum(b for t,b in zip(at,ab) if t=="Roth")
     
     rc, rb, rt, rr = 0.02, 0.06, 0.06, 0.07
-    logs=[]; total_tax=0.0
+    logs=[]; total_tax_paid=0.0
 
     for yr in range(1, end_age-cur_age+2):
         age=cur_age+yr-1
@@ -620,16 +620,18 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
 
         init_total_assets = c + bk + tr + ro
 
-        # 1. Statutory RMD Target Execution
+        # 1. Statutory RMD distribution and cash available for spending
         rmd=0.0
         f=rmd_factor(age)
         if f>0 and tr>0: rmd=min(tr,tr/f)
         sp_pt=rmd; sp_bk=0.0; sp_ro=0.0; sp_tx=0.0
         tr=max(0.0,tr-rmd)
-        rem=deficit-rmd
-        if rem<0: c+=abs(rem); rem=0.0
+        rem=demand-floors-rmd
+        if rem<0:
+            c+=-rem
+            rem=0.0
 
-        # 2. Sequential Drawdown Cascade
+        # 2. Sequential drawdown cascade; report any spending the portfolio cannot fund
         if rem>0:
             d=min(c,rem); c-=d; rem-=d
         if rem>0:
@@ -638,6 +640,7 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
             d=min(tr,rem); sp_pt+=d; tr-=d; rem-=d
         if rem>0:
             d=min(ro,rem); sp_ro=d; ro-=d; rem-=d
+        unfunded_spending=rem
 
         # 3. Dynamic Roth Conversion Engine
         conv=0.0
@@ -669,57 +672,71 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
                 tr -= conv
                 ro += conv
 
-        # 4. Tax Evaluation Loop
-        agi = floors + sp_pt + conv
-        bill = tax_calc(agi,status,sunset,yr,srate)
-        total_tax += bill
-        eff_rate = (bill/agi*100) if agi>0 else 0.0
-
-        # 5. Liquidation Hierarchy for Tax Clearance
+        # 4. Tax evaluation and tax-funding gross-up
+        base_agi = floors + sp_pt + conv
+        liquid_for_tax = c + bk
         tax_from_pretax = 0.0
-        tax_from_roth = 0.0
-        
-        if c >= bill: 
-            c -= bill; sp_tx = bill
-        elif (c + bk) >= bill: 
-            sp_tx = bill
-            bill -= c; c = 0.0
-            bk -= bill
-        else:
-            sp_tx = c + bk
-            remaining_bill = bill - sp_tx
-            c = 0.0; bk = 0.0
-            
-            if tr >= remaining_bill:
-                tr -= remaining_bill
-                tax_from_pretax = remaining_bill
-                sp_pt += remaining_bill
-                sp_tx += remaining_bill
-                remaining_bill = 0.0
-            else:
-                tax_from_pretax = tr
-                sp_pt += tr
-                sp_tx += tr
-                remaining_bill -= tr
-                tr = 0.0
 
-            if remaining_bill > 0 and ro >= remaining_bill:
-                ro -= remaining_bill; tax_from_roth = remaining_bill; sp_tx += remaining_bill; remaining_bill = 0.0
+        def tax_with_pretax_distribution(distribution):
+            return tax_calc(base_agi + distribution,status,sunset,yr,srate)
+
+        initial_bill = tax_with_pretax_distribution(0.0)
+        if initial_bill <= liquid_for_tax:
+            tax_from_pretax = 0.0
+            bill = initial_bill
+        elif tr > 0:
+            # Traditional withdrawals used to pay tax are taxable themselves.
+            # Find the smallest distribution that covers the resulting tax bill.
+            low=0.0; high=tr
+            if tax_with_pretax_distribution(high)-liquid_for_tax > high:
+                tax_from_pretax=high
+            else:
+                for _ in range(60):
+                    mid=(low+high)/2.0
+                    if tax_with_pretax_distribution(mid)-liquid_for_tax > mid:
+                        low=mid
+                    else:
+                        high=mid
+                tax_from_pretax=high
+            bill=tax_with_pretax_distribution(tax_from_pretax)
+            tr-=tax_from_pretax
+            sp_pt+=tax_from_pretax
+        else:
+            bill=initial_bill
+
+        agi=base_agi+tax_from_pretax
+        bill=tax_calc(agi,status,sunset,yr,srate)
+        eff_rate=(bill/agi*100) if agi>0 else 0.0
+
+        # Pay tax from cash, brokerage, traditional assets, then Roth.
+        tax_remaining=bill
+        paid=min(c,tax_remaining); c-=paid; tax_remaining-=paid; sp_tx+=paid
+        paid=min(bk,tax_remaining); bk-=paid; tax_remaining-=paid; sp_tx+=paid
+        if tax_from_pretax > 0:
+            paid=min(tax_from_pretax,tax_remaining)
+            tax_remaining-=paid
+            sp_tx+=paid
+        if tax_remaining > 0:
+            paid=min(ro,tax_remaining); ro-=paid; tax_remaining-=paid
+            sp_tx+=paid
+        unpaid_tax=tax_remaining
+        tax_paid=bill-unpaid_tax
+        total_tax_paid+=tax_paid
 
         irmaa = get_irmaa_tier(agi, status)
-        
-        total_outflow = (sp_pt - tax_from_pretax) + sp_bk + (sp_ro - tax_from_roth) + bill
 
         # 6. Compound Yield Engine
         noise = lambda base,rng: base+(js.Math.random()*rng*2-rng) if stoch else base
-        c*=(1+rc); bk*=(1+noise(rb,0.10)); tr*=(1+noise(rt,0.10)); ro*=(1+noise(rr,0.11))
+        c_return=noise(rc,0.0)
+        bk_return=noise(rb,0.10); tr_return=noise(rt,0.10); ro_return=noise(rr,0.11)
+        pre_growth_total=c+bk+tr+ro
+        c*=(1+c_return); bk*=(1+bk_return); tr*=(1+tr_return); ro*=(1+ro_return)
         nw=max(0.0,c+bk+tr+ro)
 
-        # 7. Diagnostic Variant Micro Accounting Audit Pass
-        actual_pre_growth = (c/(1+rc)) + (bk/(1+noise(rb,0.10) if stoch else 1+rb)) + (tr/(1+noise(rt,0.10) if stoch else 1+rt)) + (ro/(1+noise(rr,0.11) if stoch else 1+rr))
-        expected_pre_growth = init_total_assets - total_outflow
-        
-        delta = actual_pre_growth - expected_pre_growth
+        # Portfolio conservation: income less funded spending and paid tax,
+        # plus the investment return applied after all cash flows.
+        expected_pre_growth = init_total_assets + floors - (demand-unfunded_spending) - tax_paid
+        delta = pre_growth_total - expected_pre_growth
         
         if not stoch and abs(delta) > 5.0:
             if init_total_assets > 1.0:
@@ -732,8 +749,10 @@ def run_sim(strategy,cur_age,ret_age,end_age,infl,spend,status,srate,
         logs.append(dict(yr=yr,age=age,demand=demand,deficit=deficit,floors=floors,
             sp_pt=sp_pt,sp_bk=sp_bk,sp_ro=sp_ro,sp_tx=sp_tx,
             c=c,bk=bk,tr=tr,ro=ro,rmd=rmd,conv=conv,agi=agi,
-            bill=bill,eff=eff_rate,irmaa=irmaa,nw=nw,audit=audit_pass))
-    return logs, total_tax
+            bill=bill,tax_paid=tax_paid,unpaid_tax=unpaid_tax,
+            unfunded_spending=unfunded_spending,eff=eff_rate,
+            irmaa=irmaa,nw=nw,audit=audit_pass))
+    return logs, total_tax_paid
 
 def run():
     try:
@@ -788,6 +807,7 @@ def run():
                     <td class="tl c-muted">{r['yr']}</td><td class="c-muted" style="font-weight:600;">{r['age']}</td>
                     <td class="grp-budget">{format_cell(r['demand'])}</td>
                     <td class="grp-budget">{format_cell(r['deficit'], 'val-deficit')}</td>
+                    <td class="grp-budget">{format_cell(r['unfunded_spending'], 'val-outflow')}</td>
                     <td class="grp-sources">{format_cell(r['floors'])}</td>
                     <td class="grp-sources">{format_cell(r['sp_pt'], 'val-outflow')}</td>
                     <td class="grp-sources">{format_cell(r['sp_bk'], 'val-outflow')}</td>
@@ -801,6 +821,7 @@ def run():
                     <td class="grp-taxes">{format_cell(r['conv'], 'val-conversion')}</td>
                     <td class="grp-taxes c-muted">{format_cell(r['agi'])}</td>
                     <td class="grp-taxes c-red" style="font-weight:500;">{format_cell(r['bill'])}</td>
+                    <td class="grp-taxes c-red">{format_cell(r['unpaid_tax'], 'val-outflow')}</td>
                     <td class="grp-taxes c-amber">{r['eff']:.1f}%</td>
                     <td class="grp-taxes"{irmaa_cls}>{r['irmaa']}</td>
                     <td style="white-space:nowrap; padding: 2px 8px;">{r['audit']}</td>
@@ -816,11 +837,19 @@ def run():
         else:
             trials=150
             ydata={y:[] for y in range(1,end-cur+2)}
+            shortfall_trials={y:0 for y in range(1,end-cur+2)}
+            trials_with_shortfall=0
             for _ in range(trials):
                 lg,_=run_sim(strat,cur,ret,end,infl,spend,status,srate,
                     fn,fs,fe,fa,an,at,ab,sunset,True,opt_safety,opt_drain)
+                trial_shortfall=False
                 for r in lg:
-                    if r['yr'] in ydata: ydata[r['yr']].append(r['nw'])
+                    if r['yr'] in ydata:
+                        ydata[r['yr']].append(r['nw'])
+                        if r['unfunded_spending'] > 0.01 or r['unpaid_tax'] > 0.01:
+                            shortfall_trials[r['yr']]+=1
+                            trial_shortfall=True
+                if trial_shortfall: trials_with_shortfall+=1
             lbl=[]; p10=[]; p50=[]; p90=[]
             rows=[]
             for y in sorted(ydata.keys()):
@@ -841,11 +870,11 @@ def run():
                     <td colspan="4" class="tl val-deficit" style="text-align:center;">Monte Carlo Simulation Trial Mode (n=150)</td>
                     <td colspan="4" class="val-inflow">Median Net Worth (P50): {format_cell(v50)}</td>
                     <td colspan="4" class="val-outflow">Risk Floor Bounds (P10): {format_cell(v10)}</td>
-                    <td colspan="6" class="tl c-muted">Stochastic Engine Pass Ok</td>
+                    <td colspan="8" class="tl c-muted">Funding shortfall in {shortfall_trials[y]}/{trials} trials this year</td>
                 </tr>""")
                 
             document.getElementById('results-body').innerHTML="".join(rows)
-            document.getElementById('diag').innerText=f"▶ Stochastic Runway Parsed | Median Terminal NW: ${p50[-1]/1000:,.0f}k"
+            document.getElementById('diag').innerText=f"▶ Stochastic Runway | Median Terminal NW: ${p50[-1]/1000:,.0f}k | Any shortfall: {trials_with_shortfall}/{trials} trials"
             window.loadChartData(True,
                 json.dumps(lbl), json.dumps(p50),
                 json.dumps([]), json.dumps([]), json.dumps([]), json.dumps([]),
