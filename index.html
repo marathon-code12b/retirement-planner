@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Retirement Matrix Engine v4.7 (Diagnostic Ledger Edition)</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="vendor/chart.min.js"></script>
     <!-- PyScript Core -->
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
@@ -403,9 +403,26 @@
     }
 
     function triggerEngine() {
-        if (window.pyRunSim) {
-            window.pyRunSim();
+        const runner = window.pyRunSim || window.__pyRunSim;
+        if (runner) {
+            try {
+                runner();
+            } catch (e) {
+                document.getElementById('diag').innerText = `❌ Python Runtime Exception: ${String(e)}`;
+                console.error('pyRunSim error', e);
+            }
+            return;
         }
+
+        const tries = window.__pySimRetryCount || 0;
+        if (tries < 80) {
+            window.__pySimRetryCount = tries + 1;
+            document.getElementById('diag').innerText = 'Warming up simulation environment... (waiting for Python runtime)';
+            setTimeout(triggerEngine, 250);
+            return;
+        }
+
+        document.getElementById('diag').innerText = '❌ Python runtime did not initialize. Check PyScript load or browser console.';
     }
 
     window.loadChartData = function(isStochastic, labelsJson, nwJson, cJson, bkJson, trJson, roJson, demandJson, floorsJson, deficitJson, surplusJson, spPtJson, spBkJson, spRoJson, spTxJson, rmdJson, convJson, agiJson, billJson, effJson, p10Json, p90Json) {
@@ -514,13 +531,23 @@
         });
     }
 
+    // Global error handlers to surface runtime problems in the diag banner and console
+    window.addEventListener('error', (e) => {
+        try { document.getElementById('diag').innerText = `❌ Runtime Error: ${e.message}`; } catch(_){}
+        console.error('Window error', e);
+    });
+    window.addEventListener('unhandledrejection', (ev) => {
+        try { document.getElementById('diag').innerText = `❌ Promise Rejection: ${String(ev.reason)}`; } catch(_){}
+        console.error('Unhandled rejection', ev.reason);
+    });
+
     document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => { triggerEngine(); }, 1500);
     });
 </script>
 
 <!-- ══ SCENARIO AUDITING COMPUTATION ENGINE ══ -->
-<script type="text/python">
+<script type="py">
 import js, json
 from js import document, window
 
